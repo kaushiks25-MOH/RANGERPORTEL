@@ -505,7 +505,25 @@ export default function App() {
                 <CheckCircle2 size={50} />
               </div>
               <h2 style={{ fontSize: '2.5rem', fontWeight: 900, marginBottom: '0.5rem', fontFamily: 'var(--font-accent)' }}>{t.success}</h2>
-              <p style={{ opacity: 0.5, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '4px', fontWeight: 900 }}>HQ ALERTED</p>
+              <p style={{ opacity: 0.5, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '4px', fontWeight: 900, marginBottom: '2rem' }}>HQ ALERTED</p>
+              
+              <a 
+                href={`https://wa.me/?text=${encodeURIComponent(
+                  `🚨 *AECRCMC EMERGENCY ALERT*\n\n` +
+                  `*Type:* ${type}\n` +
+                  `*Range:* ${form.range}\n` +
+                  `*Severity:* ${manualSeverity}\n` +
+                  `${type === 'SIGHTING' ? `*Count:* ${form.count}\n` : `*Damage:* ${form.damageDesc}\n`}` +
+                  `*Time:* ${new Date().toLocaleTimeString()}\n\n` +
+                  `🌍 _Location link and voice notes available on HQ Dashboard._`
+                )}`}
+                target="_blank"
+                rel="noreferrer"
+                className="submit-btn"
+                style={{ background: '#25D366', textDecoration: 'none', color: 'white' }}
+              >
+                <RefreshCw size={24} style={{ transform: 'rotate(45deg)' }} /> BROADCAST TO WHATSAPP
+              </a>
             </motion.div>
           </motion.div>
         )}
