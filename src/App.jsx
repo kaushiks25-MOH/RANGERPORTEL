@@ -260,9 +260,26 @@ export default function App() {
         maleGroupCount: counts.male_group,
         femaleGroupCount: counts.female_group,
         femaleCalfCount: counts.female_calf,
-        singleFemaleCount: counts.single_female,
+        single_female_count: counts.single_female,
         remarks: counts.unidentified > 0 ? `Unidentified: ${counts.unidentified}` : ''
       });
+      
+      // Trigger Push Notification
+      if (manualSeverity === 'HIGH' || manualSeverity === 'MEDIUM') {
+        try {
+          const OneSignal = window.OneSignal;
+          if (OneSignal) {
+            OneSignal.push(() => {
+              OneSignal.sendSelfNotification(
+                `🚨 ${manualSeverity} ALERT: Elephant Sighting`,
+                `Location: ${form.range}. Check portal for photos & voice.`,
+                `${window.location.origin}/logo.png`
+              );
+            });
+          }
+        } catch (e) { console.error("Notification trigger failed", e); }
+      }
+
       setSubmittedResult(result);
       setSubmitted(true);
       
