@@ -343,6 +343,21 @@ export default function App() {
         remarks: counts.unidentified > 0 ? `Unidentified: ${counts.unidentified}` : ''
       });
       
+      // Trigger Local Native Notification (Instant)
+      if ('serviceWorker' in navigator && 'Notification' in window) {
+        if (Notification.permission === 'granted') {
+          navigator.serviceWorker.ready.then(registration => {
+            registration.showNotification(`🚨 REPORT SENT: ${form.range}`, {
+              body: `Severity: ${manualSeverity}. HQ has been alerted.`,
+              icon: '/logo.png',
+              vibrate: [200, 100, 200],
+              tag: 'report-success'
+            });
+          });
+        }
+      }
+      if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
+
       // Trigger Global Push Notification
       if (manualSeverity === 'HIGH' || manualSeverity === 'MEDIUM') {
         try {
