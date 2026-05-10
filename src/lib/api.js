@@ -38,7 +38,9 @@ export async function submitReport({
   if (image) {
     const fileExt = image.name?.split('.').pop() || 'jpg';
     const fileName = `img_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-    const { error: uploadError } = await supabase.storage.from('evidence_photos').upload(fileName, image);
+    const { error: uploadError } = await supabase.storage.from('evidence_photos').upload(fileName, image, {
+      contentType: image.type || 'image/jpeg'
+    });
     if (uploadError) throw new Error('Image upload failed: ' + uploadError.message);
     imageUrl = supabase.storage.from('evidence_photos').getPublicUrl(fileName).data.publicUrl;
   }
@@ -46,7 +48,9 @@ export async function submitReport({
   // Handle Voice Upload
   if (voice) {
     const fileName = `voice_${Date.now()}.webm`; 
-    const { error: voiceError } = await supabase.storage.from('evidence_photos').upload(fileName, voice);
+    const { error: voiceError } = await supabase.storage.from('evidence_photos').upload(fileName, voice, {
+      contentType: 'audio/webm'
+    });
     if (voiceError) throw new Error('Voice upload failed: ' + voiceError.message);
     voiceUrl = supabase.storage.from('evidence_photos').getPublicUrl(fileName).data.publicUrl;
   }
