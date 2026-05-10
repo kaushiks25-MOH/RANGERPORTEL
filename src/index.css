@@ -1,0 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;900&family=Playfair+Display:ital,wght@0,900;1,900&display=swap');
+
+:root {
+  --color-forest: #1b3d2f;
+  --color-gold: #c19a6b;
+  --color-coffee: #2c1810;
+  --color-success: #2ecc71;
+  --color-danger: #e74c3c;
+  --color-warning: #f1c40f;
+  --font-main: 'DM Sans', sans-serif;
+  --font-accent: 'Playfair Display', serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-main);
+  background-color: var(--color-coffee);
+  color: white;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px border rgba(255, 255, 255, 0.1);
+}
+
+.btn-primary {
+  background: var(--color-gold);
+  color: var(--color-coffee);
+  border: none;
+  border-radius: 12px;
+  padding: 1rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-primary:active {
+  transform: scale(0.95);
+}
+
+.input-field {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 0.8rem;
+  color: white;
+  width: 100%;
+  font-family: var(--font-main);
+}
+
+.input-field:focus {
+  outline: 2px solid var(--color-gold);
+  border-color: transparent;
+}
