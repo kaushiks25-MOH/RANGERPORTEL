@@ -135,37 +135,59 @@ export default function App() {
     setDetecting(true);
     setLocationError(null);
     
+    // First try a quick single-shot request
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        updatePosition(latitude, longitude);
+      },
+      (err) => console.warn("Quick GPS check failed, starting watch...", err),
+      { enableHighAccuracy: true, timeout: 5000 }
+    );
+
     if (watchIdRef.current) navigator.geolocation.clearWatch(watchIdRef.current);
     
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
-        const { latitude, longitude } = pos.coords;
-        setForm(prev => {
-          const updated = { ...prev, latitude, longitude };
-          let closest = RANGES[0];
-          let minDist = Infinity;
-          RANGES.forEach(r => {
-            const dist = Math.sqrt(Math.pow(latitude - r.lat, 2) + Math.pow(longitude - r.lng, 2));
-            if (dist < minDist) {
-              minDist = dist;
-              closest = r;
-            }
-          });
-          updated.range = closest.name;
-          return updated;
-        });
+        updatePosition(pos.coords.latitude, pos.coords.longitude);
         setDetecting(false);
         setLocationError(null);
       },
       (err) => {
-        console.error("GPS Error:", err);
+        console.error("GPS Watch Error:", err);
         setDetecting(false);
         if (err.code === 1) setLocationError("PERMISSION_DENIED");
         else if (err.code === 2) setLocationError("POSITION_UNAVAILABLE");
         else if (err.code === 3) setLocationError("TIMEOUT");
       },
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
     );
+  };
+
+  const updatePosition = (lat, lng) => {
+    setForm(prev => {
+      const updated = { ...prev, latitude: lat, longitude: lng };
+      let closest = RANGES[0];
+      let minDist = Infinity;
+      RANGES.forEach(r => {
+        const dist = Math.sqrt(Math.pow(lat - r.lat, 2) + Math.pow(lng - r.lng, 2));
+        if (dist < minDist) {
+          minDist = dist;
+          closest = r;
+        }
+      });
+      updated.range = closest.name;
+      return updated;
+    });
+  };
+
+  const requestNotificationPermission = async () => {
+    if ('Notification' in window) {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted' && window.OneSignal) {
+        window.OneSignal.push(() => window.OneSignal.showNativePrompt());
+      }
+    }
   };
 
   useEffect(() => {
@@ -358,11 +380,7 @@ export default function App() {
             className={`lang-toggle ${locationError || !('Notification' in window && Notification.permission === 'granted') ? 'alert' : ''}`} 
             onClick={() => {
               requestLocation();
-              if (window.OneSignal) {
-                window.OneSignal.push(function() {
-                  window.OneSignal.showNativePrompt();
-                });
-              }
+              requestNotificationPermission();
             }}
             style={{ 
               background: (locationError || (window.Notification && Notification.permission !== 'granted')) ? 'rgba(255, 71, 87, 0.2)' : '',
