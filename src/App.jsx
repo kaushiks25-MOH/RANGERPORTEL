@@ -97,13 +97,30 @@ export default function App() {
   const [audioUrl, setAudioUrl] = useState(null);
   const [detecting, setDetecting] = useState(true);
   const [activeTags, setActiveTags] = useState([]);
+  const [counts, setCounts] = useState({
+    bull: 0,
+    makhna: 0,
+    male_group: 0,
+    female_group: 0,
+    female_calf: 0,
+    single_female: 0,
+    unidentified: 0
+  });
   
   const mediaRecorderRef = useRef(null);
   const watchIdRef = useRef(null);
   const t = translations[lang];
 
+  const ELEPHANT_TYPES = [
+    { id: 'bull', label: { en: 'Bull', ta: 'காளை' }, sub: 'Large solitary male', icon: '🐘', color: '#e74c3c' },
+    { id: 'male_group', label: { en: 'Male Group', ta: 'ஆண் குழு' }, sub: 'Two or more bulls', icon: '🐘🐘', color: '#e67e22' },
+    { id: 'female_calf', label: { en: 'Female with Calf', ta: 'குட்டியுடன் பெண்' }, sub: 'Mother & Baby', icon: '🐘👶', color: '#f1c40f' },
+    { id: 'female_group', label: { en: 'Elephant Group', ta: 'யானை கூட்டம்' }, sub: 'Mixed herd', icon: '🐘🐘🐘', color: '#27ae60' },
+    { id: 'single_female', label: { en: 'Lone Cow', ta: 'தனி பெண்' }, sub: 'Solitary Female', icon: '🐘‍♀️', color: '#3498db' },
+    { id: 'unidentified', label: { en: 'Unidentified', ta: 'அடையாளம் தெரியவில்லை' }, sub: 'Unclear view', icon: '❓', color: '#95a5a6' }
+  ];
+
   useEffect(() => {
-    // Start continuous location watching for "FAST" detection
     if ('geolocation' in navigator) {
       setDetecting(true);
       watchIdRef.current = navigator.geolocation.watchPosition(
@@ -111,7 +128,6 @@ export default function App() {
           const { latitude, longitude } = pos.coords;
           setForm(prev => {
             const updated = { ...prev, latitude, longitude };
-            // Auto-detect range whenever location updates
             let closest = RANGES[0];
             let minDist = Infinity;
             RANGES.forEach(r => {
@@ -133,11 +149,19 @@ export default function App() {
         { enableHighAccuracy: true, maximumAge: 1000, timeout: 5000 }
       );
     }
-
     return () => {
       if (watchIdRef.current) navigator.geolocation.clearWatch(watchIdRef.current);
     };
   }, []);
+
+  const adjustCount = (id, delta) => {
+    setCounts(prev => {
+      const nextValue = Math.max(0, prev[id] + delta);
+      const total = Object.values({ ...prev, [id]: nextValue }).reduce((a, b) => a + b, 0);
+      setForm(f => ({ ...f, count: total }));
+      return { ...prev, [id]: nextValue };
+    });
+  };
 
   const toggleTag = (tag) => {
     setActiveTags(prev => {
@@ -179,12 +203,20 @@ export default function App() {
         ...form, 
         severity: getSeverity(),
         reportType: type, 
-        isClear: type === 'CLEARANCE' 
+        isClear: type === 'CLEARANCE',
+        bullCount: counts.bull,
+        makhnaCount: counts.makhna,
+        maleGroupCount: counts.male_group,
+        femaleGroupCount: counts.female_group,
+        femaleCalfCount: counts.female_calf,
+        singleFemaleCount: counts.single_female,
+        remarks: counts.unidentified > 0 ? `Unidentified: ${counts.unidentified}` : ''
       });
       setSubmitted(true);
       setTimeout(() => {
         setSubmitted(false);
         setForm({ ...form, count: 0, notes: '', image: null, voice: null, damageDesc: '', casualties: 0 });
+        setCounts({ bull: 0, makhna: 0, male_group: 0, female_group: 0, female_calf: 0, single_female: 0, unidentified: 0 });
         setAudioUrl(null);
         setActiveTags([]);
       }, 3000);
@@ -234,7 +266,6 @@ export default function App() {
       </div>
 
       <form onSubmit={handleSubmit} className="form-section">
-        {/* Real-time Location Info */}
         <div className="glass info-card">
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <div className="icon-box" style={{ background: 'var(--color-gold)', color: 'var(--color-coffee)' }}>
@@ -255,18 +286,48 @@ export default function App() {
 
         {type === 'SIGHTING' && (
           <div className="field-group">
-            <div className="label-container">
-              <label className="label">{t.elephantCount}</label>
-              <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.2)', fontWeight: 900 }}>QUICK ADJUST</span>
+            <label className="label" style={{ marginBottom: '1rem' }}>Sighting Categories</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              {ELEPHANT_TYPES.map(cat => (
+                <div 
+                  key={cat.id} 
+                  className={`glass media-card ${counts[cat.id] > 0 ? 'active' : ''}`}
+                  onClick={() => adjustCount(cat.id, 1)}
+                  style={{ padding: '1rem', minHeight: 'auto', gap: '0.5rem', cursor: 'pointer' }}
+                >
+                  <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'start' }}>
+                    <span style={{ fontSize: '1.5rem' }}>{cat.icon}</span>
+                    {counts[cat.id] > 0 && (
+                      <span style={{ background: cat.color, color: 'white', fontSize: '0.8rem', fontWeight: 900, padding: '2px 8px', borderRadius: '8px' }}>
+                        {counts[cat.id]}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ textAlign: 'left', width: '100%' }}>
+                    <p style={{ fontSize: '0.75rem', fontWeight: 900, color: 'white' }}>{lang === 'en' ? cat.label.en : cat.label.ta}</p>
+                    <p style={{ fontSize: '0.55rem', opacity: 0.4 }}>{cat.sub}</p>
+                  </div>
+                  {counts[cat.id] > 0 && (
+                    <button 
+                      type="button" 
+                      onClick={(e) => { e.stopPropagation(); adjustCount(cat.id, -1); }}
+                      style={{ position: 'absolute', top: '5px', right: '5px', background: 'rgba(255,0,0,0.2)', border: 'none', color: 'white', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem' }}
+                    >
+                      -
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
-            <div className="count-adjuster">
-              <button type="button" className="adj-btn" onClick={() => setForm(f => ({ ...f, count: Math.max(0, f.count - 1) }))}>
-                <Minus size={24} />
-              </button>
-              <div className="count-display">{form.count}</div>
-              <button type="button" className="adj-btn" onClick={() => setForm(f => ({ ...f, count: f.count + 1 }))}>
-                <Plus size={24} />
-              </button>
+
+            <div className="field-group" style={{ marginTop: '1rem' }}>
+              <div className="label-container">
+                <label className="label">{t.elephantCount}</label>
+                <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.2)', fontWeight: 900 }}>TOTAL</span>
+              </div>
+              <div className="count-display" style={{ textAlign: 'center', background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                {form.count}
+              </div>
             </div>
           </div>
         )}
