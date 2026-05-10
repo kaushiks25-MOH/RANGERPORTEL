@@ -353,10 +353,35 @@ export default function App() {
             <p className="label" style={{ margin: 0, opacity: 0.5, letterSpacing: '3px' }}>{t.subtitle}</p>
           </div>
         </div>
-        <button className="lang-toggle" onClick={() => setLang(lang === 'en' ? 'ta' : 'en')}>
-          <Globe size={22} />
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button 
+            className={`lang-toggle ${locationError || !('Notification' in window && Notification.permission === 'granted') ? 'alert' : ''}`} 
+            onClick={() => {
+              requestLocation();
+              if (window.OneSignal) {
+                window.OneSignal.push(function() {
+                  window.OneSignal.showNativePrompt();
+                });
+              }
+            }}
+            style={{ 
+              background: (locationError || (window.Notification && Notification.permission !== 'granted')) ? 'rgba(255, 71, 87, 0.2)' : '',
+              border: (locationError || (window.Notification && Notification.permission !== 'granted')) ? '1px solid #ff4757' : ''
+            }}
+          >
+            <ShieldCheck size={22} color={(locationError || (window.Notification && Notification.permission !== 'granted')) ? '#ff4757' : 'currentColor'} />
+          </button>
+          <button className="lang-toggle" onClick={() => setLang(lang === 'en' ? 'ta' : 'en')}>
+            <Globe size={22} />
+          </button>
+        </div>
       </header>
+      
+      {window.location.protocol === 'http:' && window.location.hostname !== 'localhost' && (
+        <div style={{ background: '#ff4757', color: 'white', fontSize: '0.7rem', padding: '5px', textAlign: 'center', fontWeight: 900 }}>
+          ⚠️ SECURITY ERROR: GPS & NOTIFICATIONS REQUIRE HTTPS
+        </div>
+      )}
 
       <div className="type-selector">
         <button 
