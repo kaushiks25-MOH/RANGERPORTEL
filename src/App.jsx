@@ -175,7 +175,12 @@ export default function App() {
     e.preventDefault();
     setLoading(true);
     try {
-      await submitReport({ ...form, reportType: type, isClear: type === 'CLEARANCE' });
+      await submitReport({ 
+        ...form, 
+        severity: getSeverity(),
+        reportType: type, 
+        isClear: type === 'CLEARANCE' 
+      });
       setSubmitted(true);
       setTimeout(() => {
         setSubmitted(false);

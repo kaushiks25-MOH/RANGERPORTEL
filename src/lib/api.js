@@ -10,8 +10,8 @@ export async function submitReport({
   latitude, 
   longitude, 
   range,
-  imageFile,
-  voiceFile,
+  image,
+  voice,
   reportType = 'SIGHTING',
   isClear = false,
   damageDesc = '',
@@ -35,18 +35,18 @@ export async function submitReport({
   let voiceUrl = null;
   
   // Handle Image Upload
-  if (imageFile) {
-    const fileExt = imageFile.name.split('.').pop();
-    const fileName = `img_${Math.random()}.${fileExt}`;
-    const { error: uploadError } = await supabase.storage.from('evidence_photos').upload(fileName, imageFile);
+  if (image) {
+    const fileExt = image.name?.split('.').pop() || 'jpg';
+    const fileName = `img_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const { error: uploadError } = await supabase.storage.from('evidence_photos').upload(fileName, image);
     if (uploadError) throw new Error('Image upload failed: ' + uploadError.message);
     imageUrl = supabase.storage.from('evidence_photos').getPublicUrl(fileName).data.publicUrl;
   }
 
   // Handle Voice Upload
-  if (voiceFile) {
+  if (voice) {
     const fileName = `voice_${Date.now()}.webm`; 
-    const { error: voiceError } = await supabase.storage.from('evidence_photos').upload(fileName, voiceFile);
+    const { error: voiceError } = await supabase.storage.from('evidence_photos').upload(fileName, voice);
     if (voiceError) throw new Error('Voice upload failed: ' + voiceError.message);
     voiceUrl = supabase.storage.from('evidence_photos').getPublicUrl(fileName).data.publicUrl;
   }
