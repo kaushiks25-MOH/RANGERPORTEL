@@ -95,7 +95,7 @@ export default function App() {
   
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [submittedData, setSubmittedData] = useState(null);
+  const [submittedResult, setSubmittedResult] = useState(null);
   const [recording, setRecording] = useState(false);
   const [audioUrl, setAudioUrl] = useState(null);
   const [detecting, setDetecting] = useState(true);
@@ -263,21 +263,48 @@ export default function App() {
         singleFemaleCount: counts.single_female,
         remarks: counts.unidentified > 0 ? `Unidentified: ${counts.unidentified}` : ''
       });
-      setSubmittedData(result);
+      setSubmittedResult(result);
       setSubmitted(true);
+      
+      // Auto-reset after 15 seconds to allow WhatsApp click
       setTimeout(() => {
         setSubmitted(false);
-        setSubmittedData(null);
+        setSubmittedResult(null);
         setForm({ count: 0, notes: '', images: [], voice: null, damageDesc: '', casualties: 0, chaseResult: '', latitude: form.latitude, longitude: form.longitude, range: form.range });
         setCounts({ bull: 0, makhna: 0, male_group: 0, female_group: 0, female_calf: 0, single_female: 0, unidentified: 0 });
         setAudioUrl(null);
         setActiveTags([]);
-      }, 7000); // 7s to give time to click broadcast
+      }, 15000);
     } catch (err) {
       alert(t.error + ': ' + err.message);
     } finally {
       setLoading(false);
     }
+  };
+
+  const generateWhatsAppMessage = () => {
+    if (!submittedResult) return '';
+    
+    const severityEmoji = manualSeverity === 'HIGH' ? '🔴' : manualSeverity === 'MEDIUM' ? '🟠' : '🟢';
+    const photosCount = submittedResult.image_urls?.length || 0;
+    
+    let msg = `🚨 *AECRCMC EMERGENCY ALERT*\n`;
+    msg += `🚨 *அவசர எச்சரிக்கை*\n\n`;
+    msg += `📍 *Range / சரகம்:* ${submittedResult.range}\n`;
+    msg += `🔥 *Severity / தீவிரம்:* ${severityEmoji} ${manualSeverity}\n`;
+    msg += `🐘 *Count / எண்ணிக்கை:* ${submittedResult.elephant_count}\n`;
+    if (submittedResult.damage_desc) msg += `📜 *Damage / சேதம்:* ${submittedResult.damage_desc}\n`;
+    msg += `📎 *Attachments:* ${photosCount} Photos 📸, ${submittedResult.voice_url ? '1 Voice Note 🎤' : 'No Voice'}\n\n`;
+    
+    // Add direct links
+    if (submittedResult.image_url) msg += `🖼️ *Photo 1:* ${submittedResult.image_url}\n`;
+    if (submittedResult.image_url_2) msg += `🖼️ *Photo 2:* ${submittedResult.image_url_2}\n`;
+    if (submittedResult.voice_url) msg += `🎤 *Voice Note:* ${submittedResult.voice_url}\n`;
+    
+    msg += `\n⏰ *Time / நேரம்:* ${new Date(submittedResult.created_at).toLocaleTimeString()}\n`;
+    msg += `🌍 _Dashboard: Full gallery uploaded._`;
+    
+    return encodeURIComponent(msg);
   };
 
   return (
@@ -576,19 +603,7 @@ export default function App() {
               <p style={{ opacity: 0.5, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '4px', fontWeight: 900, marginBottom: '2rem' }}>HQ ALERTED</p>
               
               <a 
-                href={`https://wa.me/?text=${encodeURIComponent(
-                  `🚨 *AECRCMC EMERGENCY ALERT*\n` +
-                  `🚨 *அவசர எச்சரிக்கை*\n\n` +
-                  `📍 *Range / சரகம்:* ${form.range}\n` +
-                  `🔥 *Severity / தீவிரம்:* ${manualSeverity === 'HIGH' ? '🔴 HIGH / அதிகம்' : manualSeverity === 'MEDIUM' ? '🟠 MEDIUM / நடுத்தரம்' : '🟢 LOW / குறைவு'}\n` +
-                  `🐘 *Count / எண்ணிக்கை:* ${form.count}\n` +
-                  `${type === 'CLEARANCE' ? `📜 *Damage / சேதம்:* ${form.damageDesc}\n` : ''}` +
-                  `📎 *Attachments:* ${form.images.length} Photos 📸, ${form.voice ? '1 Voice Note 🎤' : 'No Voice'}\n` +
-                  `${submittedData?.image_url ? `🖼️ *Photo 1:* ${submittedData.image_url}\n` : ''}` +
-                  `${submittedData?.voice_url ? `🎤 *Audio Proof:* ${submittedData.voice_url}\n` : ''}` +
-                  `⏰ *Time / நேரம்:* ${new Date().toLocaleTimeString()}\n\n` +
-                  `🌍 _Dashboard: Full gallery uploaded._`
-                )}`}
+                href={`https://wa.me/?text=${generateWhatsAppMessage()}`}
                 target="_blank"
                 rel="noreferrer"
                 className="submit-btn"
