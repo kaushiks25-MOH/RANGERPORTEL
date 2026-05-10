@@ -101,6 +101,7 @@ export default function App() {
   const [detecting, setDetecting] = useState(true);
   const [activeTags, setActiveTags] = useState([]);
   const [manualSeverity, setManualSeverity] = useState('LOW');
+  const [subscriptionId, setSubscriptionId] = useState(null);
   const [counts, setCounts] = useState({
     bull: 0,
     makhna: 0,
@@ -110,6 +111,17 @@ export default function App() {
     single_female: 0,
     unidentified: 0
   });
+
+  useEffect(() => {
+    const checkSub = async () => {
+      if (window.OneSignal) {
+        const id = await window.OneSignal.getUserId();
+        setSubscriptionId(id);
+      }
+    };
+    const interval = setInterval(checkSub, 5000);
+    return () => clearInterval(interval);
+  }, []);
   
   const mediaRecorderRef = useRef(null);
   const watchIdRef = useRef(null);
@@ -488,6 +500,24 @@ export default function App() {
         </div>
       </header>
       
+      {!subscriptionId && !loading && (
+        <div 
+          onClick={requestNotificationPermission}
+          style={{ 
+            background: '#ff4757', 
+            color: 'white', 
+            padding: '12px', 
+            textAlign: 'center', 
+            fontSize: '0.8rem', 
+            fontWeight: 900,
+            cursor: 'pointer',
+            animation: 'pulse 2s infinite'
+          }}
+        >
+          🚨 ALERT SYSTEM DISCONNECTED! TAP HERE TO JOIN
+        </div>
+      )}
+
       {window.location.protocol === 'http:' && window.location.hostname !== 'localhost' && (
         <div style={{ background: '#ff4757', color: 'white', fontSize: '0.7rem', padding: '5px', textAlign: 'center', fontWeight: 900 }}>
           ⚠️ SECURITY ERROR: GPS & NOTIFICATIONS REQUIRE HTTPS
