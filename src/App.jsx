@@ -112,12 +112,12 @@ export default function App() {
   const t = translations[lang];
 
   const ELEPHANT_TYPES = [
-    { id: 'bull', label: { en: 'Bull', ta: 'காளை' }, sub: 'Large solitary male', icon: '🐘', color: '#e74c3c' },
-    { id: 'male_group', label: { en: 'Male Group', ta: 'ஆண் குழு' }, sub: 'Two or more bulls', icon: '🐘🐘', color: '#e67e22' },
-    { id: 'female_calf', label: { en: 'Female with Calf', ta: 'குட்டியுடன் பெண்' }, sub: 'Mother & Baby', icon: '🐘👶', color: '#f1c40f' },
-    { id: 'female_group', label: { en: 'Elephant Group', ta: 'யானை கூட்டம்' }, sub: 'Mixed herd', icon: '🐘🐘🐘', color: '#27ae60' },
-    { id: 'single_female', label: { en: 'Lone Cow', ta: 'தனி பெண்' }, sub: 'Solitary Female', icon: '🐘‍♀️', color: '#3498db' },
-    { id: 'unidentified', label: { en: 'Unidentified', ta: 'அடையாளம் தெரியவில்லை' }, sub: 'Unclear view', icon: '❓', color: '#95a5a6' }
+    { id: 'bull', label: { en: 'Bull', ta: 'காளை' }, sub: 'Large solitary male', img: '/bull.png', color: '#e74c3c' },
+    { id: 'male_group', label: { en: 'Male Group', ta: 'ஆண் குழு' }, sub: 'Two or more bulls', img: '/bull.png', color: '#e67e22' },
+    { id: 'female_calf', label: { en: 'Female with Calf', ta: 'குட்டியுடன் பெண்' }, sub: 'Mother & Baby', img: '/mother_calf.png', color: '#f1c40f' },
+    { id: 'female_group', label: { en: 'Elephant Group', ta: 'யானை கூட்டம்' }, sub: 'Mixed herd', img: '/group.png', color: '#27ae60' },
+    { id: 'single_female', label: { en: 'Lone Cow', ta: 'தனி பெண்' }, sub: 'Solitary Female', img: '/cow.png', color: '#3498db' },
+    { id: 'unidentified', label: { en: 'Unidentified', ta: 'அடையாளம் தெரியவில்லை' }, sub: 'Unclear view', img: '/logo.png', color: '#95a5a6' }
   ];
 
   useEffect(() => {
@@ -303,11 +303,11 @@ export default function App() {
                     border: counts[cat.id] > 0 ? `2px solid ${cat.color}` : '1px solid rgba(255,255,255,0.05)'
                   }}
                 >
-                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                    <div style={{ fontSize: '2rem', width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: '15px' }}>
-                      {cat.icon}
+                  <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ width: '60px', height: '60px', borderRadius: '15px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
+                      <img src={cat.img} alt={cat.id} style={{ width: '100%', height: '100%', objectCover: 'cover' }} />
                     </div>
-                    <div style={{ textAlign: 'left' }}>
+                    <div style={{ textAlign: 'right' }}>
                       <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white', margin: 0 }}>{lang === 'en' ? cat.label.en : cat.label.ta}</p>
                       <p style={{ fontSize: '0.7rem', opacity: 0.4, margin: 0 }}>{cat.sub}</p>
                     </div>
