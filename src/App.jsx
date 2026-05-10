@@ -8,12 +8,9 @@ import {
   Play, 
   Square, 
   RefreshCw, 
-  ArrowRight, 
   Globe,
   Navigation,
-  FileText,
   ShieldCheck,
-  ChevronRight,
   Info
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -31,61 +28,53 @@ const RANGES = [
 
 const translations = {
   en: {
-    title: 'AECRCMC Field Portal',
-    subtitle: 'Official Field Reporting Utility',
-    sighting: 'New Sighting',
-    clearance: 'Area Clearance',
-    elephantCount: 'Number of Elephants',
-    severity: 'Live Severity',
-    location: 'Location (GPS)',
-    detecting: 'Detecting Range...',
+    title: 'AECRCMC',
+    subtitle: 'Ranger Portal',
+    sighting: 'Sighting',
+    clearance: 'Clearance',
+    elephantCount: 'Elephant Count',
+    severity: 'Severity',
+    location: 'Location',
+    detecting: 'Detecting...',
     detected: 'Detected Range',
-    notes: 'Observation Notes',
-    voiceNote: 'Voice Evidence',
-    record: 'Record Voice',
-    recording: 'Recording...',
+    notes: 'Observations',
+    voiceNote: 'Voice',
+    record: 'Record',
+    recording: 'Recording',
     stop: 'Stop',
     play: 'Play',
-    photo: 'Evidence Photo',
+    photo: 'Evidence',
     submit: 'Submit Report',
-    submitting: 'Uploading...',
-    success: 'Report Submitted Successfully',
-    error: 'Submission Failed',
-    range: 'Forest Range',
-    damage: 'Damage Caused?',
-    casualties: 'Casualties (if any)',
-    officer: 'Officer Name',
-    team: 'Team Members',
+    submitting: 'Submitting...',
+    success: 'Report Sent',
+    error: 'Error',
+    range: 'Range',
     high: 'HIGH',
     medium: 'MEDIUM',
     low: 'LOW'
   },
   ta: {
-    title: 'AECRCMC கள போர்டல்',
-    subtitle: 'அதிகாரப்பூர்வ கள அறிக்கை பயன்பாடு',
-    sighting: 'புதிய பார்வை',
-    clearance: 'பகுதி கிளியரன்ஸ்',
+    title: 'AECRCMC',
+    subtitle: 'வனக் காவலர் போர்டல்',
+    sighting: 'பார்வை',
+    clearance: 'கிளியரன்ஸ்',
     elephantCount: 'யானைகளின் எண்ணிக்கை',
-    severity: 'நேரடி தீவிரம்',
-    location: 'இருப்பிடம் (GPS)',
-    detecting: 'சரகம் கண்டறியப்படுகிறது...',
+    severity: 'தீவிரம்',
+    location: 'இருப்பிடம்',
+    detecting: 'கண்டறியப்படுகிறது...',
     detected: 'கண்டறியப்பட்ட சரகம்',
-    notes: 'கவனிப்பு குறிப்புகள்',
-    voiceNote: 'குரல் சான்று',
-    record: 'குரலைப் பதிவு செய்',
-    recording: 'பதிவு செய்யப்படுகிறது...',
+    notes: 'கவனிப்புகள்',
+    voiceNote: 'குரல்',
+    record: 'பதிவு செய்',
+    recording: 'பதிவாகிறது',
     stop: 'நிறுத்து',
     play: 'இயக்கு',
-    photo: 'சான்று புகைப்படம்',
+    photo: 'சான்று',
     submit: 'அறிக்கையை சமர்ப்பி',
-    submitting: 'பதிவேற்றப்படுகிறது...',
-    success: 'அறிக்கை வெற்றிகரமாக சமர்ப்பிக்கப்பட்டது',
-    error: 'சமர்ப்பிப்பதில் தோல்வி',
-    range: 'வன சரகம்',
-    damage: 'சேதம் விளைவிக்கப்பட்டதா?',
-    casualties: 'உயிரிழப்புகள் (ஏதேனும் இருந்தால்)',
-    officer: 'அதிகாரி பெயர்',
-    team: 'குழு உறுப்பினர்கள்',
+    submitting: 'சமர்ப்பிக்கப்படுகிறது...',
+    success: 'அறிக்கை அனுப்பப்பட்டது',
+    error: 'பிழை',
+    range: 'சரகம்',
     high: 'அதிகம்',
     medium: 'நடுத்தரம்',
     low: 'குறைவு'
@@ -94,7 +83,7 @@ const translations = {
 
 export default function App() {
   const [lang, setLang] = useState('en');
-  const [type, setType] = useState('SIGHTING'); // SIGHTING or CLEARANCE
+  const [type, setType] = useState('SIGHTING');
   const [form, setForm] = useState({
     count: 0,
     notes: '',
@@ -104,9 +93,7 @@ export default function App() {
     image: null,
     voice: null,
     damageDesc: '',
-    casualties: 0,
-    officerName: '',
-    teamMembers: ''
+    casualties: 0
   });
   
   const [loading, setLoading] = useState(false);
@@ -154,14 +141,12 @@ export default function App() {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
       const chunks = [];
-      
       recorder.ondataavailable = (e) => chunks.push(e.data);
       recorder.onstop = () => {
         const blob = new Blob(chunks, { type: 'audio/webm' });
         setForm(prev => ({ ...prev, voice: blob }));
         setAudioUrl(URL.createObjectURL(blob));
       };
-      
       recorder.start();
       mediaRecorderRef.current = recorder;
       setRecording(true);
@@ -179,11 +164,7 @@ export default function App() {
     e.preventDefault();
     setLoading(true);
     try {
-      await submitReport({
-        ...form,
-        reportType: type,
-        isClear: type === 'CLEARANCE'
-      });
+      await submitReport({ ...form, reportType: type, isClear: type === 'CLEARANCE' });
       setSubmitted(true);
       setTimeout(() => {
         setSubmitted(false);
@@ -206,199 +187,136 @@ export default function App() {
   const severity = getSeverity();
 
   return (
-    <div className="max-w-md mx-auto min-h-screen flex flex-col p-4">
-      {/* Header */}
-      <header className="flex justify-between items-center mb-8 pt-4">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-white rounded-full p-1 border-2 border-[var(--color-gold)]">
-            <img src="/logo.png" alt="AECRCMC" className="w-full h-full object-contain" />
+    <div className="portal-container">
+      <header className="header">
+        <div className="logo-container">
+          <div className="logo-circle">
+            <img src="/logo.png" alt="AECRCMC" />
           </div>
           <div>
-            <h1 className="font-[family-name:var(--font-playfair)] text-xl font-black text-[var(--color-gold)]">{t.title}</h1>
-            <p className="text-[10px] uppercase tracking-widest text-white/40">{t.subtitle}</p>
+            <h1 style={{ fontFamily: 'var(--font-accent)', fontSize: '1.5rem', color: 'var(--color-gold)' }}>{t.title}</h1>
+            <p className="label" style={{ margin: 0, opacity: 0.6 }}>{t.subtitle}</p>
           </div>
         </div>
-        <button 
-          onClick={() => setLang(lang === 'en' ? 'ta' : 'en')}
-          className="w-10 h-10 rounded-full glass flex items-center justify-center text-[var(--color-gold)] border border-white/10"
-        >
+        <button className="lang-toggle" onClick={() => setLang(lang === 'en' ? 'ta' : 'en')}>
           <Globe size={20} />
         </button>
       </header>
 
-      {/* Type Selector */}
-      <div className="flex gap-2 mb-8 bg-black/20 p-1.5 rounded-2xl border border-white/5">
+      <div className="type-selector">
         <button 
           onClick={() => setType('SIGHTING')}
-          className={`flex-1 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${type === 'SIGHTING' ? 'bg-[var(--color-gold)] text-[var(--color-coffee)] shadow-lg' : 'text-white/40'}`}
+          className={`type-btn ${type === 'SIGHTING' ? 'active sighting' : ''}`}
         >
           <AlertTriangle size={16} /> {t.sighting}
         </button>
         <button 
           onClick={() => setType('CLEARANCE')}
-          className={`flex-1 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${type === 'CLEARANCE' ? 'bg-[var(--color-forest)] text-white shadow-lg' : 'text-white/40'}`}
+          className={`type-btn ${type === 'CLEARANCE' ? 'active clearance' : ''}`}
         >
           <ShieldCheck size={16} /> {t.clearance}
         </button>
       </div>
 
-      {/* Form */}
-      <form onSubmit={handleSubmit} className="flex-1 space-y-6 pb-20">
-        {/* GPS Info */}
-        <div className="glass p-4 rounded-3xl border border-white/10 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[var(--color-gold)]/10 flex items-center justify-center text-[var(--color-gold)]">
+      <form onSubmit={handleSubmit} className="form-section">
+        <div className="glass info-row">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div className="icon-box" style={{ background: 'var(--color-gold)', color: 'var(--color-coffee)' }}>
               <MapPin size={20} />
             </div>
             <div>
-              <p className="text-[10px] uppercase tracking-widest text-white/40">{detecting ? t.detecting : t.detected}</p>
-              <p className="text-sm font-bold">{form.range || '---'}</p>
+              <p className="label" style={{ margin: 0 }}>{detecting ? t.detecting : t.detected}</p>
+              <p style={{ fontWeight: 800, fontSize: '0.9rem' }}>{form.range || '---'}</p>
             </div>
           </div>
-          <button type="button" onClick={fetchLocation} className="p-2 text-white/40 hover:text-white">
-            <RefreshCw size={18} className={detecting ? 'animate-spin' : ''} />
+          <button type="button" onClick={fetchLocation} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)' }}>
+            <RefreshCw size={20} className={detecting ? 'animate-spin' : ''} />
           </button>
         </div>
 
-        {/* Severity Badge */}
         {type === 'SIGHTING' && (
-          <div className="flex items-center justify-between glass p-4 rounded-3xl border border-white/10">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/40">
+          <div className="glass info-row">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div className="icon-box">
                 <Info size={20} />
               </div>
-              <span className="text-[10px] uppercase tracking-widest text-white/40">{t.severity}</span>
+              <span className="label" style={{ margin: 0 }}>{t.severity}</span>
             </div>
-            <span className={`px-4 py-1.5 rounded-full text-[10px] font-black tracking-[0.2em] border shadow-lg ${
-              severity === 'HIGH' ? 'bg-red-500/20 border-red-500 text-red-500 animate-pulse' :
-              severity === 'MEDIUM' ? 'bg-orange-500/20 border-orange-500 text-orange-500' :
-              'bg-green-500/20 border-green-500 text-green-500'
-            }`}>
+            <span className={`severity-badge ${severity.toLowerCase()}`}>
               {t[severity.toLowerCase()]}
             </span>
           </div>
         )}
 
-        {/* Main Inputs */}
-        <div className="space-y-4">
+        <div className="field-group">
           {type === 'SIGHTING' && (
-            <div>
-              <label className="text-[10px] uppercase tracking-[0.3em] text-white/40 mb-3 block ml-1">{t.elephantCount}</label>
+            <div style={{ marginBottom: '1rem' }}>
+              <label className="label">{t.elephantCount}</label>
               <input 
                 type="number" 
                 value={form.count}
                 onChange={e => setForm({...form, count: parseInt(e.target.value) || 0})}
-                className="input-field text-2xl font-black py-4"
+                className="input-main"
+                style={{ fontSize: '2rem', textAlign: 'center' }}
               />
             </div>
           )}
 
           <div>
-            <label className="text-[10px] uppercase tracking-[0.3em] text-white/40 mb-3 block ml-1">{t.notes}</label>
+            <label className="label">{t.notes}</label>
             <textarea 
               value={form.notes}
               onChange={e => setForm({...form, notes: e.target.value})}
-              className="input-field min-h-[100px] resize-none"
+              className="input-main"
               placeholder="..."
             />
           </div>
         </div>
 
-        {/* Media Tools */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-3">
-            <label className="text-[10px] uppercase tracking-widest text-white/40 block ml-1">{t.voiceNote}</label>
-            {!recording ? (
-              <button 
-                type="button"
-                onClick={startRecording}
-                className="w-full h-24 glass rounded-3xl flex flex-col items-center justify-center gap-2 border-dashed border-white/10 hover:border-[var(--color-gold)]/40 transition-all group"
-              >
-                <div className="w-10 h-10 rounded-full bg-[var(--color-gold)]/10 flex items-center justify-center text-[var(--color-gold)] group-hover:scale-110 transition-transform">
-                  <Mic size={20} />
-                </div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-white/40">{t.record}</span>
-              </button>
-            ) : (
-              <button 
-                type="button"
-                onClick={stopRecording}
-                className="w-full h-24 bg-red-500/10 rounded-3xl flex flex-col items-center justify-center gap-2 border border-red-500/40 animate-pulse"
-              >
-                <div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center text-white">
-                  <Square size={20} fill="white" />
-                </div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-red-500">{t.recording}</span>
-              </button>
-            )}
-            {audioUrl && !recording && (
-              <button 
-                type="button"
-                onClick={() => new Audio(audioUrl).play()}
-                className="w-full py-2 bg-[var(--color-gold)]/10 border border-[var(--color-gold)]/20 rounded-xl text-[var(--color-gold)] text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2"
-              >
-                <Play size={12} fill="currentColor" /> {t.play}
-              </button>
-            )}
+        <div className="media-grid">
+          <div className={`glass media-card ${form.voice || recording ? 'active' : ''}`} onClick={() => !recording && !audioUrl && startRecording()}>
+            <div className="icon-box">
+              {recording ? <Square size={20} fill="currentColor" className="animate-pulse" /> : <Mic size={20} />}
+            </div>
+            <span className="media-label">{recording ? t.recording : form.voice ? 'Voice OK' : t.record}</span>
+            {recording && <button type="button" onClick={(e) => {e.stopPropagation(); stopRecording();}} className="btn-stop" style={{ position: 'absolute', inset: 0, background: 'none', border: 'none' }}></button>}
+            {audioUrl && !recording && <button type="button" onClick={(e) => {e.stopPropagation(); new Audio(audioUrl).play();}} style={{ marginTop: '0.5rem', background: 'none', border: 'none', color: 'var(--color-gold)', fontSize: '0.6rem', fontWeight: 900 }}>PLAY</button>}
           </div>
 
-          <div className="space-y-3">
-            <label className="text-[10px] uppercase tracking-widest text-white/40 block ml-1">{t.photo}</label>
-            <div className="relative h-24">
-              <input 
-                type="file" 
-                accept="image/*" 
-                capture="environment"
-                onChange={e => setForm({...form, image: e.target.files[0]})}
-                className="absolute inset-0 opacity-0 z-10 cursor-pointer"
-              />
-              <div className={`w-full h-full glass rounded-3xl flex flex-col items-center justify-center gap-2 border-dashed border-white/10 ${form.image ? 'border-[var(--color-gold)]/40 bg-[var(--color-gold)]/5' : ''}`}>
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${form.image ? 'bg-[var(--color-gold)] text-[var(--color-coffee)]' : 'bg-white/5 text-white/40'}`}>
-                  {form.image ? <CheckCircle2 size={20} /> : <Camera size={20} />}
-                </div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-white/40">
-                  {form.image ? 'Selected' : 'Capture'}
-                </span>
-              </div>
+          <div className={`glass media-card ${form.image ? 'active' : ''}`}>
+            <input 
+              type="file" 
+              accept="image/*" 
+              capture="environment"
+              onChange={e => setForm({...form, image: e.target.files[0]})}
+              style={{ position: 'absolute', inset: 0, opacity: 0, zIndex: 10 }}
+            />
+            <div className="icon-box">
+              {form.image ? <CheckCircle2 size={20} /> : <Camera size={20} />}
             </div>
+            <span className="media-label">{form.image ? 'Photo OK' : t.photo}</span>
           </div>
         </div>
 
-        {/* Submit Button */}
         <button 
           disabled={loading || submitted}
-          className={`w-full py-5 rounded-2xl font-black uppercase tracking-[0.2em] shadow-2xl transition-all flex items-center justify-center gap-3 mt-8 ${
-            submitted ? 'bg-[var(--color-success)] text-white' : 
-            'bg-[var(--color-gold)] text-[var(--color-coffee)] active:scale-95'
-          }`}
+          className={`submit-btn ${submitted ? 'success' : ''}`}
         >
           {loading ? <RefreshCw size={24} className="animate-spin" /> : 
            submitted ? <CheckCircle2 size={24} /> : 
-           <><Navigation size={24} /> {t.submit}</>}
+           <><Navigation size={20} /> {t.submit}</>}
         </button>
       </form>
 
-      {/* Success Modal */}
       <AnimatePresence>
         {submitted && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[var(--color-coffee)]/90 backdrop-blur-md"
-          >
-            <motion.div 
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              className="bg-white/5 border border-white/10 p-10 rounded-[40px] text-center space-y-6 shadow-2xl"
-            >
-              <div className="w-20 h-20 bg-[var(--color-success)]/20 rounded-full flex items-center justify-center text-[var(--color-success)] mx-auto border border-[var(--color-success)]/40">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="success-overlay">
+            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="success-card">
+              <div style={{ width: '80px', height: '80px', background: 'rgba(46, 204, 113, 0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifycenter: 'center', color: '#2ecc71', margin: '0 auto 2rem' }}>
                 <CheckCircle2 size={40} />
               </div>
-              <div>
-                <h2 className="text-2xl font-black text-white">{t.success}</h2>
-                <p className="text-white/40 text-sm mt-2">AECRCMC HQ notified in real-time.</p>
-              </div>
+              <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '0.5rem' }}>{t.success}</h2>
+              <p style={{ opacity: 0.4, fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '2px' }}>HQ Notified</p>
             </motion.div>
           </motion.div>
         )}
