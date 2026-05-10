@@ -303,18 +303,28 @@ export default function App() {
         remarks: counts.unidentified > 0 ? `Unidentified: ${counts.unidentified}` : ''
       });
       
-      // Trigger Push Notification
+      // Trigger Global Push Notification
       if (manualSeverity === 'HIGH' || manualSeverity === 'MEDIUM') {
         try {
-          const OneSignal = window.OneSignal || (window.OneSignalDeferred && window.OneSignalDeferred[0]);
-          if (OneSignal && typeof OneSignal.sendSelfNotification === 'function') {
-            OneSignal.sendSelfNotification(
-              `🚨 ${manualSeverity} ALERT: Elephant Sighting`,
-              `Location: ${form.range}. Check portal for photos & voice.`,
-              `${window.location.origin}/logo.png`
-            );
-          }
-        } catch (e) { console.error("Notification trigger failed", e); }
+          const ONESIGNAL_APP_ID = "c0f05ba1-1926-4a22-acb6-95cee85013c3";
+          const ONESIGNAL_REST_KEY = "os_v2_app_ydyfxiizezfcflfwsxhoquatynyfx2yovw3etevsupzrj2ujidlmyyjht5rs3jgabd7fezftfnbiloj7qwcs4jzx6mb2z5obggipbmq";
+          
+          await fetch("https://onesignal.com/api/v1/notifications", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json; charset=utf-8",
+              "Authorization": `Basic ${ONESIGNAL_REST_KEY}`
+            },
+            body: JSON.stringify({
+              app_id: ONESIGNAL_APP_ID,
+              included_segments: ["All"],
+              headings: { en: `🚨 ${manualSeverity} ALERT: Elephant Sighting`, ta: `🚨 ${manualSeverity === 'HIGH' ? 'அதிக' : 'நடுத்தர'} எச்சரிக்கை` },
+              contents: { en: `Location: ${form.range}. Check portal for photos & voice.`, ta: `${form.range} பகுதியில் யானை நடமாட்டம். புகைப்படங்களை சரிபார்க்கவும்.` },
+              chrome_web_icon: `${window.location.origin}/logo.png`,
+              data: { report_id: result.id }
+            })
+          });
+        } catch (e) { console.error("Global Broadcast failed", e); }
       }
 
       setSubmittedResult(result);
