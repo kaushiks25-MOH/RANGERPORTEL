@@ -10,7 +10,7 @@ export async function submitReport({
   latitude, 
   longitude, 
   range,
-  images = [], // Changed from image to images array
+  images = [], 
   voice,
   reportType = 'SIGHTING',
   isClear = false,
@@ -31,11 +31,11 @@ export async function submitReport({
   chaseResult = '',
   remarks = ''
 }) {
-  const imageUrls = [null, null, null];
+  const uploadedUrls = [];
   let voiceUrl = null;
   
-  // Handle Multiple Image Uploads
-  for (let i = 0; i < Math.min(images.length, 3); i++) {
+  // Handle Unlimited Image Uploads
+  for (let i = 0; i < images.length; i++) {
     const image = images[i];
     if (image) {
       const fileExt = image.name?.split('.').pop() || 'jpg';
@@ -44,7 +44,8 @@ export async function submitReport({
         contentType: image.type || 'image/jpeg'
       });
       if (uploadError) throw new Error(`Image ${i+1} upload failed: ` + uploadError.message);
-      imageUrls[i] = supabase.storage.from('evidence_photos').getPublicUrl(fileName).data.publicUrl;
+      const publicUrl = supabase.storage.from('evidence_photos').getPublicUrl(fileName).data.publicUrl;
+      uploadedUrls.push(publicUrl);
     }
   }
 
@@ -68,12 +69,10 @@ export async function submitReport({
       latitude: latitude,
       longitude: longitude,
       range: range,
-      image_url: imageUrls[0],
-      image_url_2: imageUrls[1],
-      image_url_3: imageUrls[2],
+      image_url: uploadedUrls[0] || null, // Primary image
+      image_urls: uploadedUrls, // Full gallery
       voice_url: voiceUrl,
       report_type: reportType,
-// ... (rest same)
       is_clear: isClear,
       damage_desc: damageDesc,
       casualties: casualties,

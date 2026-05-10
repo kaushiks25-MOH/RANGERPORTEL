@@ -14,7 +14,8 @@ import {
   Plus,
   Minus,
   Navigation2,
-  Trash2
+  Trash2,
+  Image as ImageIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { submitReport } from './lib/api';
@@ -85,52 +86,12 @@ export default function App() {
     latitude: null,
     longitude: null,
     range: '',
-    images: [null, null, null], // Array for 3 images
+    images: [], 
     voice: null,
     damageDesc: '',
-    casualties: 0
+    casualties: 0,
+    chaseResult: ''
   });
-
-  const compressImage = (file) => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = (event) => {
-        const img = new Image();
-        img.src = event.target.result;
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 1024;
-          let width = img.width;
-          let height = img.height;
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
-          }
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-          canvas.toBlob((blob) => {
-            resolve(new File([blob], file.name, { type: 'image/jpeg' }));
-          }, 'image/jpeg', 0.7); // 70% quality
-        };
-      };
-    });
-  };
-
-  const handleImageChange = async (index, file) => {
-    if (!file) return;
-    setLoading(true);
-    const compressed = await compressImage(file);
-    setForm(prev => {
-      const next = [...prev.images];
-      next[index] = compressed;
-      return { ...prev, images: next };
-    });
-    setLoading(false);
-  };
-// ... (rest of the component)
   
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -196,6 +157,53 @@ export default function App() {
     };
   }, []);
 
+  const compressImage = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 1024;
+          let width = img.width;
+          let height = img.height;
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob((blob) => {
+            resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+          }, 'image/jpeg', 0.7);
+        };
+      };
+    });
+  };
+
+  const handleAddPhotos = async (files) => {
+    if (!files.length) return;
+    setLoading(true);
+    const newImages = [];
+    for (const file of Array.from(files)) {
+      const compressed = await compressImage(file);
+      newImages.push(compressed);
+    }
+    setForm(prev => ({ ...prev, images: [...prev.images, ...newImages] }));
+    setLoading(false);
+  };
+
+  const removePhoto = (index) => {
+    setForm(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }));
+  };
+
   const adjustCount = (id, delta) => {
     setCounts(prev => {
       const nextValue = Math.max(0, prev[id] + delta);
@@ -257,7 +265,7 @@ export default function App() {
       setSubmitted(true);
       setTimeout(() => {
         setSubmitted(false);
-        setForm({ ...form, count: 0, notes: '', image: null, voice: null, damageDesc: '', casualties: 0 });
+        setForm({ count: 0, notes: '', images: [], voice: null, damageDesc: '', casualties: 0, chaseResult: '', latitude: form.latitude, longitude: form.longitude, range: form.range });
         setCounts({ bull: 0, makhna: 0, male_group: 0, female_group: 0, female_calf: 0, single_female: 0, unidentified: 0 });
         setAudioUrl(null);
         setActiveTags([]);
@@ -267,12 +275,6 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const getSeverity = () => {
-    if (form.casualties > 0 || form.count > 5 || activeTags.length > 2) return 'HIGH';
-    if (form.count > 2 || activeTags.length > 0) return 'MEDIUM';
-    return 'LOW';
   };
 
   return (
@@ -355,7 +357,7 @@ export default function App() {
                 >
                   <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ width: '60px', height: '60px', borderRadius: '15px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
-                      <img src={cat.img} alt={cat.id} style={{ width: '100%', height: '100%', objectCover: 'cover' }} />
+                      <img src={cat.img} alt={cat.id} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white', margin: 0 }}>{lang === 'en' ? cat.label.en : cat.label.ta}</p>
@@ -513,32 +515,42 @@ export default function App() {
             )}
           </div>
 
-          {[0, 1, 2].map(idx => (
-            <div key={idx} className={`glass media-card ${form.images[idx] ? 'active' : ''}`} style={{ position: 'relative' }}>
-              <input 
-                type="file" 
-                accept="image/*" 
-                capture="environment"
-                onChange={e => handleImageChange(idx, e.target.files[0])}
-                style={{ position: 'absolute', inset: 0, opacity: 0, zIndex: 10, cursor: 'pointer' }}
-              />
-              <div className="icon-box">
-                {form.images[idx] ? <CheckCircle2 size={24} /> : <Camera size={24} />}
-              </div>
-              <span className="media-label">{form.images[idx] ? `PHOTO ${idx + 1}` : `PHOTO ${idx + 1}`}</span>
-              {form.images[idx] && (
-                <button 
-                  type="button" 
-                  onClick={(e) => { e.stopPropagation(); setForm(f => { const ni = [...f.images]; ni[idx] = null; return { ...f, images: ni }; }) }}
-                  className="tag" 
-                  style={{ position: 'absolute', top: '5px', right: '5px', borderRadius: '50%', width: '20px', height: '20px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  <Trash2 size={12} />
-                </button>
-              )}
+          <div className="glass media-card" style={{ position: 'relative' }}>
+            <input 
+              type="file" 
+              accept="image/*" 
+              capture="environment"
+              multiple
+              onChange={e => handleAddPhotos(e.target.files)}
+              style={{ position: 'absolute', inset: 0, opacity: 0, zIndex: 10, cursor: 'pointer' }}
+            />
+            <div className="icon-box">
+              <Camera size={24} />
             </div>
-          ))}
+            <span className="media-label">ADD PHOTOS ({form.images.length})</span>
+          </div>
         </div>
+
+        {form.images.length > 0 && (
+          <div className="field-group" style={{ marginTop: '1rem' }}>
+             <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '10px' }}>
+                {form.images.map((img, i) => (
+                  <div key={i} style={{ position: 'relative', flexShrink: 0 }}>
+                    <div style={{ width: '60px', height: '60px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                       <ImageIcon size={20} className="text-[var(--color-gold)]" />
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={() => removePhoto(i)}
+                      style={{ position: 'absolute', top: '-5px', right: '-5px', background: 'red', border: 'none', color: 'white', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                ))}
+             </div>
+          </div>
+        )}
 
         <button 
           disabled={loading || submitted || detecting}
@@ -568,9 +580,9 @@ export default function App() {
                   `🔥 *Severity / தீவிரம்:* ${manualSeverity === 'HIGH' ? '🔴 HIGH / அதிகம்' : manualSeverity === 'MEDIUM' ? '🟠 MEDIUM / நடுத்தரம்' : '🟢 LOW / குறைவு'}\n` +
                   `🐘 *Count / எண்ணிக்கை:* ${form.count}\n` +
                   `${type === 'CLEARANCE' ? `📜 *Damage / சேதம்:* ${form.damageDesc}\n` : ''}` +
-                  `📎 *Attachments:* ${form.images.filter(i=>i).length} Photos 📸, ${form.voice ? '1 Voice Note 🎤' : 'No Voice'}\n` +
+                  `📎 *Attachments:* ${form.images.length} Photos 📸, ${form.voice ? '1 Voice Note 🎤' : 'No Voice'}\n` +
                   `⏰ *Time / நேரம்:* ${new Date().toLocaleTimeString()}\n\n` +
-                  `🌍 _Dashboard: Detailed location & media uploaded._`
+                  `🌍 _Dashboard: Full gallery uploaded._`
                 )}`}
                 target="_blank"
                 rel="noreferrer"
