@@ -287,45 +287,61 @@ export default function App() {
         {type === 'SIGHTING' && (
           <div className="field-group">
             <label className="label" style={{ marginBottom: '1rem' }}>Sighting Categories</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
               {ELEPHANT_TYPES.map(cat => (
                 <div 
                   key={cat.id} 
                   className={`glass media-card ${counts[cat.id] > 0 ? 'active' : ''}`}
                   onClick={() => adjustCount(cat.id, 1)}
-                  style={{ padding: '1rem', minHeight: 'auto', gap: '0.5rem', cursor: 'pointer' }}
+                  style={{ 
+                    padding: '1.25rem', 
+                    minHeight: 'auto', 
+                    flexDirection: 'row', 
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    cursor: 'pointer',
+                    border: counts[cat.id] > 0 ? `2px solid ${cat.color}` : '1px solid rgba(255,255,255,0.05)'
+                  }}
                 >
-                  <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'start' }}>
-                    <span style={{ fontSize: '1.5rem' }}>{cat.icon}</span>
-                    {counts[cat.id] > 0 && (
-                      <span style={{ background: cat.color, color: 'white', fontSize: '0.8rem', fontWeight: 900, padding: '2px 8px', borderRadius: '8px' }}>
-                        {counts[cat.id]}
-                      </span>
-                    )}
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <div style={{ fontSize: '2rem', width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: '15px' }}>
+                      {cat.icon}
+                    </div>
+                    <div style={{ textAlign: 'left' }}>
+                      <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white', margin: 0 }}>{lang === 'en' ? cat.label.en : cat.label.ta}</p>
+                      <p style={{ fontSize: '0.7rem', opacity: 0.4, margin: 0 }}>{cat.sub}</p>
+                    </div>
                   </div>
-                  <div style={{ textAlign: 'left', width: '100%' }}>
-                    <p style={{ fontSize: '0.75rem', fontWeight: 900, color: 'white' }}>{lang === 'en' ? cat.label.en : cat.label.ta}</p>
-                    <p style={{ fontSize: '0.55rem', opacity: 0.4 }}>{cat.sub}</p>
-                  </div>
-                  {counts[cat.id] > 0 && (
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: 'rgba(0,0,0,0.3)', padding: '0.5rem', borderRadius: '12px' }} onClick={(e) => e.stopPropagation()}>
                     <button 
                       type="button" 
-                      onClick={(e) => { e.stopPropagation(); adjustCount(cat.id, -1); }}
-                      style={{ position: 'absolute', top: '5px', right: '5px', background: 'rgba(255,0,0,0.2)', border: 'none', color: 'white', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem' }}
+                      onClick={() => adjustCount(cat.id, -1)}
+                      style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', borderRadius: '8px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     >
-                      -
+                      <Minus size={20} />
                     </button>
-                  )}
+                    <span style={{ minWidth: '24px', textAlign: 'center', fontWeight: 900, fontSize: '1.2rem', color: cat.color }}>
+                      {counts[cat.id]}
+                    </span>
+                    <button 
+                      type="button" 
+                      onClick={() => adjustCount(cat.id, 1)}
+                      style={{ background: cat.color, border: 'none', color: 'white', borderRadius: '8px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      <Plus size={20} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
 
-            <div className="field-group" style={{ marginTop: '1rem' }}>
+            <div className="field-group" style={{ marginTop: '2rem' }}>
               <div className="label-container">
                 <label className="label">{t.elephantCount}</label>
-                <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.2)', fontWeight: 900 }}>TOTAL</span>
+                <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.2)', fontWeight: 900 }}>TOTAL COUNT</span>
               </div>
-              <div className="count-display" style={{ textAlign: 'center', background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div style={{ textAlign: 'center', background: 'rgba(255,255,255,0.03)', padding: '1.5rem', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)', fontSize: '3rem', fontWeight: 900, color: 'var(--color-gold)', fontFamily: 'var(--font-accent)' }}>
                 {form.count}
               </div>
             </div>
