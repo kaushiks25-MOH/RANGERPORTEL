@@ -356,7 +356,15 @@ export default function App() {
           });
         }
       }
-      if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
+      // Play Emergency Siren Sound
+      const playSiren = () => {
+        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
+        audio.volume = 1.0;
+        audio.play().catch(e => console.warn("Audio play blocked by browser", e));
+      };
+      playSiren();
+
+      if ('vibrate' in navigator) navigator.vibrate([500, 200, 500, 200, 500]);
 
       // Trigger Global Push Notification
       if (manualSeverity === 'HIGH' || manualSeverity === 'MEDIUM') {
