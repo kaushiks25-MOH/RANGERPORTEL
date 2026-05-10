@@ -348,8 +348,65 @@ export default function App() {
           </div>
         )}
 
+        {type === 'CLEARANCE' && (
+          <div className="field-group" style={{ animation: 'slideUp 0.3s ease-out' }}>
+            <div className="glass info-card" style={{ background: 'rgba(46, 204, 113, 0.1)', borderColor: 'rgba(46, 204, 113, 0.2)', marginBottom: '1.5rem' }}>
+               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <ShieldCheck size={24} className="text-green-500" />
+                  <div>
+                    <p className="label" style={{ color: '#2ecc71' }}>POST-CONFLICT STATUS</p>
+                    <p style={{ fontWeight: 900, fontSize: '1.1rem' }}>Area Secured & Clear</p>
+                  </div>
+               </div>
+            </div>
+
+            <div className="field-group">
+              <label className="label">Damage Assessment</label>
+              <div className="tag-container">
+                {['No Damage', 'Crop Damage', 'Property Damage', 'Human Injury', 'Casualty'].map(tag => (
+                  <div 
+                    key={tag} 
+                    onClick={() => setForm({...form, damageDesc: tag})}
+                    className={`tag ${form.damageDesc === tag ? 'active' : ''}`}
+                    style={{ background: form.damageDesc === tag ? 'var(--color-gold)' : '' }}
+                  >
+                    {tag}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="field-group" style={{ marginTop: '1.5rem' }}>
+              <div className="label-container">
+                <label className="label">Casualties Reported</label>
+                <span style={{ fontSize: '0.6rem', color: 'red', fontWeight: 900 }}>CRITICAL</span>
+              </div>
+              <div className="count-adjuster" style={{ background: 'rgba(255,0,0,0.05)', borderColor: 'rgba(255,0,0,0.1)' }}>
+                <button type="button" className="adj-btn" onClick={() => setForm(f => ({ ...f, casualties: Math.max(0, f.casualties - 1) }))}>
+                  <Minus size={24} />
+                </button>
+                <div className="count-display" style={{ color: form.casualties > 0 ? 'red' : 'white' }}>{form.casualties}</div>
+                <button type="button" className="adj-btn" onClick={() => setForm(f => ({ ...f, casualties: f.casualties + 1 }))}>
+                  <Plus size={24} />
+                </button>
+              </div>
+            </div>
+
+            <div className="field-group" style={{ marginTop: '1.5rem' }}>
+              <label className="label">Chase Result / Final Direction</label>
+              <input 
+                type="text"
+                value={form.chaseResult || ''}
+                onChange={e => setForm({...form, chaseResult: e.target.value})}
+                className="input-main"
+                placeholder="e.g. Driven towards forest boundary"
+              />
+            </div>
+          </div>
+        )}
+
         <div className="field-group">
-          <label className="label">{t.notes}</label>
+          <label className="label">{type === 'SIGHTING' ? t.notes : 'Final Remarks'}</label>
           <textarea 
             value={form.notes}
             onChange={e => setForm({...form, notes: e.target.value})}
@@ -357,17 +414,19 @@ export default function App() {
             placeholder="..."
             rows={3}
           />
-          <div className="tag-container">
-            {t.tags.map(tag => (
-              <div 
-                key={tag} 
-                onClick={() => toggleTag(tag)}
-                className={`tag ${activeTags.includes(tag) ? 'active' : ''}`}
-              >
-                {tag}
-              </div>
-            ))}
-          </div>
+          {type === 'SIGHTING' && (
+            <div className="tag-container">
+              {t.tags.map(tag => (
+                <div 
+                  key={tag} 
+                  onClick={() => toggleTag(tag)}
+                  className={`tag ${activeTags.includes(tag) ? 'active' : ''}`}
+                >
+                  {tag}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="media-grid">
