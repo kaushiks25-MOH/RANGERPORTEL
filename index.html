@@ -8,6 +8,16 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>AECRCMC Ranger Portal</title>
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script>
+      window.OneSignal = window.OneSignal || [];
+      OneSignal.push(function() {
+        OneSignal.init({
+          appId: "c270e59a-5b4e-4f3b-a9b4-9e6793331cdd", // Placeholder for actual ID
+          allowLocalhostAsSecureOrigin: true,
+        });
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>
