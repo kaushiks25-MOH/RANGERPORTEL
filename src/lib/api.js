@@ -69,8 +69,10 @@ export async function submitReport({
       latitude: latitude,
       longitude: longitude,
       range: range,
-      image_url: uploadedUrls[0] || null, // Primary image
-      image_urls: uploadedUrls, // Full gallery
+      image_url: uploadedUrls[0] || null, 
+      image_url_2: uploadedUrls[1] || null, 
+      image_url_3: uploadedUrls[2] || null, 
+      image_urls: uploadedUrls, 
       voice_url: voiceUrl,
       report_type: reportType,
       is_clear: isClear,
