@@ -95,6 +95,7 @@ export default function App() {
   
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submittedData, setSubmittedData] = useState(null);
   const [recording, setRecording] = useState(false);
   const [audioUrl, setAudioUrl] = useState(null);
   const [detecting, setDetecting] = useState(true);
@@ -249,7 +250,7 @@ export default function App() {
     e.preventDefault();
     setLoading(true);
     try {
-      await submitReport({ 
+      const result = await submitReport({ 
         ...form, 
         severity: manualSeverity,
         reportType: type, 
@@ -262,14 +263,16 @@ export default function App() {
         singleFemaleCount: counts.single_female,
         remarks: counts.unidentified > 0 ? `Unidentified: ${counts.unidentified}` : ''
       });
+      setSubmittedData(result);
       setSubmitted(true);
       setTimeout(() => {
         setSubmitted(false);
+        setSubmittedData(null);
         setForm({ count: 0, notes: '', images: [], voice: null, damageDesc: '', casualties: 0, chaseResult: '', latitude: form.latitude, longitude: form.longitude, range: form.range });
         setCounts({ bull: 0, makhna: 0, male_group: 0, female_group: 0, female_calf: 0, single_female: 0, unidentified: 0 });
         setAudioUrl(null);
         setActiveTags([]);
-      }, 3000);
+      }, 7000); // 7s to give time to click broadcast
     } catch (err) {
       alert(t.error + ': ' + err.message);
     } finally {
@@ -581,6 +584,8 @@ export default function App() {
                   `🐘 *Count / எண்ணிக்கை:* ${form.count}\n` +
                   `${type === 'CLEARANCE' ? `📜 *Damage / சேதம்:* ${form.damageDesc}\n` : ''}` +
                   `📎 *Attachments:* ${form.images.length} Photos 📸, ${form.voice ? '1 Voice Note 🎤' : 'No Voice'}\n` +
+                  `${submittedData?.image_url ? `🖼️ *Photo 1:* ${submittedData.image_url}\n` : ''}` +
+                  `${submittedData?.voice_url ? `🎤 *Audio Proof:* ${submittedData.voice_url}\n` : ''}` +
                   `⏰ *Time / நேரம்:* ${new Date().toLocaleTimeString()}\n\n` +
                   `🌍 _Dashboard: Full gallery uploaded._`
                 )}`}
