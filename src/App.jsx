@@ -97,6 +97,7 @@ export default function App() {
   const [audioUrl, setAudioUrl] = useState(null);
   const [detecting, setDetecting] = useState(true);
   const [activeTags, setActiveTags] = useState([]);
+  const [manualSeverity, setManualSeverity] = useState('LOW');
   const [counts, setCounts] = useState({
     bull: 0,
     makhna: 0,
@@ -201,7 +202,7 @@ export default function App() {
     try {
       await submitReport({ 
         ...form, 
-        severity: getSeverity(),
+        severity: manualSeverity,
         reportType: type, 
         isClear: type === 'CLEARANCE',
         bullCount: counts.bull,
@@ -279,8 +280,16 @@ export default function App() {
               </div>
             </div>
           </div>
-          <div className={`severity-badge ${getSeverity().toLowerCase()}`}>
-            {t[getSeverity().toLowerCase()]}
+          <div 
+            className={`severity-badge ${manualSeverity.toLowerCase()}`}
+            onClick={() => {
+              const levels = ['LOW', 'MEDIUM', 'HIGH'];
+              const next = levels[(levels.indexOf(manualSeverity) + 1) % 3];
+              setManualSeverity(next);
+            }}
+            style={{ cursor: 'pointer', transition: 'all 0.3s ease', border: '1px solid rgba(255,255,255,0.2)' }}
+          >
+            {manualSeverity}
           </div>
         </div>
 
