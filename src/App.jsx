@@ -185,8 +185,16 @@ export default function App() {
     if ('Notification' in window) {
       const permission = await Notification.requestPermission();
       if (permission === 'granted' && window.OneSignal) {
-        window.OneSignal.push(() => window.OneSignal.showNativePrompt());
+        window.OneSignal.push(async () => {
+          await window.OneSignal.showNativePrompt();
+          const id = await window.OneSignal.getUserId();
+          alert(id ? "✅ Subscribed! ID: " + id : "⏳ Waiting for OneSignal...");
+        });
+      } else {
+        alert("❌ Permission " + permission);
       }
+    } else {
+      alert("❌ Browser does not support notifications");
     }
   };
 
@@ -309,7 +317,7 @@ export default function App() {
           const ONESIGNAL_APP_ID = "c0f05ba1-1926-4a22-acb6-95cee85013c3";
           const ONESIGNAL_REST_KEY = "os_v2_app_ydyfxiizezfcflfwsxhoquatynyfx2yovw3etevsupzrj2ujidlmyyjht5rs3jgabd7fezftfnbiloj7qwcs4jzx6mb2z5obggipbmq";
           
-          await fetch("https://onesignal.com/api/v1/notifications", {
+          const response = await fetch("https://onesignal.com/api/v1/notifications", {
             method: "POST",
             headers: {
               "Content-Type": "application/json; charset=utf-8",
@@ -324,7 +332,14 @@ export default function App() {
               data: { report_id: result.id }
             })
           });
-        } catch (e) { console.error("Global Broadcast failed", e); }
+          if (!response.ok) {
+            const errData = await response.json();
+            alert("Broadcast Error: " + JSON.stringify(errData));
+          }
+        } catch (e) { 
+          console.error("Global Broadcast failed", e);
+          alert("Network Error: Could not reach OneSignal. (Check if CORS is blocked)");
+        }
       }
 
       setSubmittedResult(result);
