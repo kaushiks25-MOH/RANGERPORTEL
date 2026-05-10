@@ -135,7 +135,6 @@ export default function App() {
     setDetecting(true);
     setLocationError(null);
     
-    // First try a quick single-shot request
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
@@ -196,6 +195,30 @@ export default function App() {
     } else {
       alert("❌ Browser does not support notifications");
     }
+  };
+
+  const testDirectNotification = async () => {
+    if (!window.OneSignal) return alert("OneSignal not loaded");
+    const userId = await window.OneSignal.getUserId();
+    if (!userId) return alert("Please click 'JOIN ALERTS' first!");
+
+    try {
+      const ONESIGNAL_APP_ID = "c0f05ba1-1926-4a22-acb6-95cee85013c3";
+      const ONESIGNAL_REST_KEY = "os_v2_app_ydyfxiizezfcflfwsxhoquatynyfx2yovw3etevsupzrj2ujidlmyyjht5rs3jgabd7fezftfnbiloj7qwcs4jzx6mb2z5obggipbmq";
+      
+      const response = await fetch("https://onesignal.com/api/v1/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json; charset=utf-8", "Authorization": `Basic ${ONESIGNAL_REST_KEY}` },
+        body: JSON.stringify({
+          app_id: ONESIGNAL_APP_ID,
+          include_player_ids: [userId],
+          headings: { en: "🔔 TEST SUCCESSFUL!" },
+          contents: { en: "Your phone is correctly linked to AECRCMC alerts." }
+        })
+      });
+      if (response.ok) alert("Test signal sent to your phone! Wait 5 seconds.");
+      else alert("Test failed: " + await response.text());
+    } catch (e) { alert("Test Error: " + e.message); }
   };
 
   useEffect(() => {
@@ -325,7 +348,7 @@ export default function App() {
             },
             body: JSON.stringify({
               app_id: ONESIGNAL_APP_ID,
-              included_segments: ["All"],
+              included_segments: ["All", "Subscribed Users"],
               headings: { en: `🚨 ${manualSeverity} ALERT: Elephant Sighting`, ta: `🚨 ${manualSeverity === 'HIGH' ? 'அதிக' : 'நடுத்தர'} எச்சரிக்கை` },
               contents: { en: `Location: ${form.range}. Check portal for photos & voice.`, ta: `${form.range} பகுதியில் யானை நடமாட்டம். புகைப்படங்களை சரிபார்க்கவும்.` },
               chrome_web_icon: `${window.location.origin}/logo.png`,
@@ -348,7 +371,6 @@ export default function App() {
       setSubmittedResult(result);
       setSubmitted(true);
       
-      // Auto-reset after 15 seconds to allow WhatsApp click
       setTimeout(() => {
         setSubmitted(false);
         setSubmittedResult(null);
@@ -378,7 +400,6 @@ export default function App() {
     if (submittedResult.damage_desc) msg += `📜 *Damage / சேதம்:* ${submittedResult.damage_desc}\n`;
     msg += `📎 *Attachments:* ${photosCount} Photos 📸, ${submittedResult.voice_url ? '1 Voice Note 🎤' : 'No Voice'}\n\n`;
     
-    // Add direct links
     if (submittedResult.image_url) msg += `🖼️ *Photo 1:* ${submittedResult.image_url}\n`;
     if (submittedResult.image_url_2) msg += `🖼️ *Photo 2:* ${submittedResult.image_url_2}\n`;
     if (submittedResult.voice_url) msg += `🎤 *Voice Note:* ${submittedResult.voice_url}\n`;
@@ -405,23 +426,20 @@ export default function App() {
           <button 
             className="lang-toggle"
             onClick={requestNotificationPermission}
-            style={{ 
-              background: '#2ecc71',
-              color: 'white',
-              fontSize: '0.6rem',
-              width: 'auto',
-              padding: '0 10px',
-              fontWeight: 900
-            }}
+            style={{ background: '#2ecc71', color: 'white', fontSize: '0.6rem', width: 'auto', padding: '0 10px', fontWeight: 900 }}
           >
             JOIN ALERTS
           </button>
           <button 
+            className="lang-toggle"
+            onClick={testDirectNotification}
+            style={{ background: '#3498db', color: 'white', fontSize: '0.6rem', width: 'auto', padding: '0 10px', fontWeight: 900 }}
+          >
+            TEST ME
+          </button>
+          <button 
             className={`lang-toggle ${locationError || !('Notification' in window && Notification.permission === 'granted') ? 'alert' : ''}`} 
-            onClick={() => {
-              requestLocation();
-              requestNotificationPermission();
-            }}
+            onClick={() => { requestLocation(); requestNotificationPermission(); }}
             style={{ 
               background: (locationError || (window.Notification && Notification.permission !== 'granted')) ? 'rgba(255, 71, 87, 0.2)' : '',
               border: (locationError || (window.Notification && Notification.permission !== 'granted')) ? '1px solid #ff4757' : ''
@@ -476,12 +494,7 @@ export default function App() {
                 </p>
                 {!detecting && !locationError && <div className="pulse-dot"></div>}
                 {locationError && (
-                  <button 
-                    type="button" 
-                    onClick={requestLocation}
-                    className="tag active"
-                    style={{ padding: '2px 8px', fontSize: '0.6rem', marginLeft: '5px' }}
-                  >
+                  <button type="button" onClick={requestLocation} className="tag active" style={{ padding: '2px 8px', fontSize: '0.6rem', marginLeft: '5px' }}>
                     RETRY
                   </button>
                 )}
@@ -510,15 +523,7 @@ export default function App() {
                   key={cat.id} 
                   className={`glass media-card ${counts[cat.id] > 0 ? 'active' : ''}`}
                   onClick={() => adjustCount(cat.id, 1)}
-                  style={{ 
-                    padding: '1.25rem', 
-                    minHeight: 'auto', 
-                    flexDirection: 'row', 
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    cursor: 'pointer',
-                    border: counts[cat.id] > 0 ? `2px solid ${cat.color}` : '1px solid rgba(255,255,255,0.05)'
-                  }}
+                  style={{ padding: '1.25rem', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', border: counts[cat.id] > 0 ? `2px solid ${cat.color}` : '1px solid rgba(255,255,255,0.05)' }}
                 >
                   <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ width: '60px', height: '60px', borderRadius: '15px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
@@ -529,38 +534,21 @@ export default function App() {
                       <p style={{ fontSize: '0.7rem', opacity: 0.4, margin: 0 }}>{cat.sub}</p>
                     </div>
                   </div>
-                  
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: 'rgba(0,0,0,0.3)', padding: '0.5rem', borderRadius: '12px' }} onClick={(e) => e.stopPropagation()}>
-                    <button 
-                      type="button" 
-                      onClick={() => adjustCount(cat.id, -1)}
-                      style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', borderRadius: '8px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                    >
+                    <button type="button" onClick={() => adjustCount(cat.id, -1)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', borderRadius: '8px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Minus size={20} />
                     </button>
-                    <span style={{ minWidth: '24px', textAlign: 'center', fontWeight: 900, fontSize: '1.2rem', color: cat.color }}>
-                      {counts[cat.id]}
-                    </span>
-                    <button 
-                      type="button" 
-                      onClick={() => adjustCount(cat.id, 1)}
-                      style={{ background: cat.color, border: 'none', color: 'white', borderRadius: '8px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                    >
+                    <span style={{ minWidth: '24px', textAlign: 'center', fontWeight: 900, fontSize: '1.2rem', color: cat.color }}>{counts[cat.id]}</span>
+                    <button type="button" onClick={() => adjustCount(cat.id, 1)} style={{ background: cat.color, border: 'none', color: 'white', borderRadius: '8px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Plus size={20} />
                     </button>
                   </div>
                 </div>
               ))}
             </div>
-
             <div className="field-group" style={{ marginTop: '2rem' }}>
-              <div className="label-container">
-                <label className="label">{t.elephantCount}</label>
-                <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.2)', fontWeight: 900 }}>TOTAL COUNT</span>
-              </div>
-              <div style={{ textAlign: 'center', background: 'rgba(255,255,255,0.03)', padding: '1.5rem', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)', fontSize: '3rem', fontWeight: 900, color: 'var(--color-gold)', fontFamily: 'var(--font-accent)' }}>
-                {form.count}
-              </div>
+              <div className="label-container"><label className="label">{t.elephantCount}</label><span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.2)', fontWeight: 900 }}>TOTAL COUNT</span></div>
+              <div style={{ textAlign: 'center', background: 'rgba(255,255,255,0.03)', padding: '1.5rem', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)', fontSize: '3rem', fontWeight: 900, color: 'var(--color-gold)', fontFamily: 'var(--font-accent)' }}>{form.count}</div>
             </div>
           </div>
         )}
@@ -568,131 +556,45 @@ export default function App() {
         {type === 'CLEARANCE' && (
           <div className="field-group" style={{ animation: 'slideUp 0.3s ease-out' }}>
             <div className="glass info-card" style={{ background: 'rgba(46, 204, 113, 0.1)', borderColor: 'rgba(46, 204, 113, 0.2)', marginBottom: '1.5rem' }}>
-               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <ShieldCheck size={24} className="text-green-500" />
-                  <div>
-                    <p className="label" style={{ color: '#2ecc71' }}>POST-CONFLICT STATUS</p>
-                    <p style={{ fontWeight: 900, fontSize: '1.1rem' }}>Area Secured & Clear</p>
-                  </div>
-               </div>
+               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}><ShieldCheck size={24} className="text-green-500" /><div><p className="label" style={{ color: '#2ecc71' }}>POST-CONFLICT STATUS</p><p style={{ fontWeight: 900, fontSize: '1.1rem' }}>Area Secured & Clear</p></div></div>
             </div>
-
             <div className="field-group">
               <label className="label">Damage Assessment</label>
               <div className="tag-container">
-                {[
-                  { label: 'No Damage', icon: '✅' },
-                  { label: 'Crop Damage', icon: '🌾' },
-                  { label: 'Property Damage', icon: '🏠' },
-                  { label: 'Human Injury', icon: '🩹' },
-                  { label: 'Casualty', icon: '🚑' }
-                ].map(item => (
-                  <div 
-                    key={item.label} 
-                    onClick={() => setForm({...form, damageDesc: item.label})}
-                    className={`tag ${form.damageDesc === item.label ? 'active' : ''}`}
-                    style={{ 
-                      background: form.damageDesc === item.label ? 'var(--color-gold)' : '',
-                      padding: '10px 15px',
-                      fontSize: '0.7rem'
-                    }}
-                  >
+                {[ { label: 'No Damage', icon: '✅' }, { label: 'Crop Damage', icon: '🌾' }, { label: 'Property Damage', icon: '🏠' }, { label: 'Human Injury', icon: '🩹' }, { label: 'Casualty', icon: '🚑' } ].map(item => (
+                  <div key={item.label} onClick={() => setForm({...form, damageDesc: item.label})} className={`tag ${form.damageDesc === item.label ? 'active' : ''}`} style={{ background: form.damageDesc === item.label ? 'var(--color-gold)' : '', padding: '10px 15px', fontSize: '0.7rem' }}>
                     <span style={{ marginRight: '5px' }}>{item.icon}</span> {item.label}
                   </div>
                 ))}
               </div>
             </div>
-
             <div className="field-group" style={{ marginTop: '1.5rem' }}>
-              <div className="label-container">
-                <label className="label">Casualties Reported</label>
-                <span style={{ fontSize: '0.6rem', color: 'red', fontWeight: 900 }}>CRITICAL</span>
-              </div>
+              <div className="label-container"><label className="label">Casualties Reported</label><span style={{ fontSize: '0.6rem', color: 'red', fontWeight: 900 }}>CRITICAL</span></div>
               <div className="count-adjuster" style={{ background: 'rgba(255,0,0,0.05)', borderColor: 'rgba(255,0,0,0.1)' }}>
-                <button type="button" className="adj-btn" onClick={() => setForm(f => ({ ...f, casualties: Math.max(0, f.casualties - 1) }))}>
-                  <Minus size={24} />
-                </button>
-                <div className="count-display" style={{ 
-                  color: form.casualties > 0 ? 'red' : 'white', 
-                  fontFamily: 'Inter, sans-serif',
-                  fontSize: '3rem'
-                }}>{form.casualties}</div>
-                <button type="button" className="adj-btn" onClick={() => setForm(f => ({ ...f, casualties: f.casualties + 1 }))}>
-                  <Plus size={24} />
-                </button>
+                <button type="button" className="adj-btn" onClick={() => setForm(f => ({ ...f, casualties: Math.max(0, f.casualties - 1) }))}><Minus size={24} /></button>
+                <div className="count-display" style={{ color: form.casualties > 0 ? 'red' : 'white', fontFamily: 'Inter, sans-serif', fontSize: '3rem' }}>{form.casualties}</div>
+                <button type="button" className="adj-btn" onClick={() => setForm(f => ({ ...f, casualties: f.casualties + 1 }))}><Plus size={24} /></button>
               </div>
             </div>
-
-            <div className="field-group" style={{ marginTop: '1.5rem' }}>
-              <label className="label">Chase Result / Final Direction</label>
-              <input 
-                type="text"
-                value={form.chaseResult || ''}
-                onChange={e => setForm({...form, chaseResult: e.target.value})}
-                className="input-main"
-                placeholder="e.g. Driven towards forest boundary"
-              />
-            </div>
+            <div className="field-group" style={{ marginTop: '1.5rem' }}><label className="label">Chase Result / Final Direction</label><input type="text" value={form.chaseResult || ''} onChange={e => setForm({...form, chaseResult: e.target.value})} className="input-main" placeholder="e.g. Driven towards forest boundary" /></div>
           </div>
         )}
 
         <div className="field-group">
           <label className="label">{type === 'SIGHTING' ? t.notes : 'Final Remarks'}</label>
-          <textarea 
-            value={form.notes}
-            onChange={e => setForm({...form, notes: e.target.value})}
-            className="input-main"
-            placeholder="..."
-            rows={3}
-          />
-          {type === 'SIGHTING' && (
-            <div className="tag-container">
-              {t.tags.map(tag => (
-                <div 
-                  key={tag} 
-                  onClick={() => toggleTag(tag)}
-                  className={`tag ${activeTags.includes(tag) ? 'active' : ''}`}
-                >
-                  {tag}
-                </div>
-              ))}
-            </div>
-          )}
+          <textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} className="input-main" placeholder="..." rows={3} />
+          {type === 'SIGHTING' && ( <div className="tag-container">{t.tags.map(tag => ( <div key={tag} onClick={() => toggleTag(tag)} className={`tag ${activeTags.includes(tag) ? 'active' : ''}`}>{tag}</div> ))}</div> )}
         </div>
 
         <div className="media-grid">
-          <div 
-            className={`glass media-card ${form.voice || recording ? 'active' : ''}`} 
-            onClick={() => {
-              if (recording) stopRecording();
-              else if (!audioUrl) startRecording();
-            }}
-          >
-            <div className="icon-box">
-              {recording ? <Square size={24} fill="currentColor" /> : <Mic size={24} />}
-            </div>
+          <div className={`glass media-card ${form.voice || recording ? 'active' : ''}`} onClick={() => { if (recording) stopRecording(); else if (!audioUrl) startRecording(); }}>
+            <div className="icon-box">{recording ? <Square size={24} fill="currentColor" /> : <Mic size={24} />}</div>
             <span className="media-label">{recording ? t.recording : form.voice ? 'READY' : t.record}</span>
-            {audioUrl && !recording && (
-              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                 <button type="button" onClick={(e) => {e.stopPropagation(); new Audio(audioUrl).play();}} className="tag active" style={{ borderRadius: '8px' }}><Play size={10} fill="currentColor" /></button>
-                 <button type="button" onClick={(e) => {e.stopPropagation(); setAudioUrl(null); setForm(f=>({...f, voice: null}))}} className="tag" style={{ borderRadius: '8px' }}><Trash2 size={10} /></button>
-              </div>
-            )}
+            {audioUrl && !recording && ( <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}><button type="button" onClick={(e) => {e.stopPropagation(); new Audio(audioUrl).play();}} className="tag active" style={{ borderRadius: '8px' }}><Play size={10} fill="currentColor" /></button><button type="button" onClick={(e) => {e.stopPropagation(); setAudioUrl(null); setForm(f=>({...f, voice: null}))}} className="tag" style={{ borderRadius: '8px' }}><Trash2 size={10} /></button></div> )}
           </div>
-
           <div className="glass media-card" style={{ position: 'relative' }}>
-            <input 
-              type="file" 
-              accept="image/*" 
-              capture="environment"
-              multiple
-              onChange={e => handleAddPhotos(e.target.files)}
-              style={{ position: 'absolute', inset: 0, opacity: 0, zIndex: 10, cursor: 'pointer' }}
-            />
-            <div className="icon-box">
-              <Camera size={24} />
-            </div>
-            <span className="media-label">ADD PHOTOS ({form.images.length})</span>
+            <input type="file" accept="image/*" capture="environment" multiple onChange={e => handleAddPhotos(e.target.files)} style={{ position: 'absolute', inset: 0, opacity: 0, zIndex: 10, cursor: 'pointer' }} />
+            <div className="icon-box"><Camera size={24} /></div><span className="media-label">ADD PHOTOS ({form.images.length})</span>
           </div>
         </div>
 
@@ -701,29 +603,16 @@ export default function App() {
              <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '10px' }}>
                 {form.images.map((img, i) => (
                   <div key={i} style={{ position: 'relative', flexShrink: 0 }}>
-                    <div style={{ width: '60px', height: '60px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                       <ImageIcon size={20} className="text-[var(--color-gold)]" />
-                    </div>
-                    <button 
-                      type="button"
-                      onClick={() => removePhoto(i)}
-                      style={{ position: 'absolute', top: '-5px', right: '-5px', background: 'red', border: 'none', color: 'white', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                    >
-                      <Trash2 size={12} />
-                    </button>
+                    <div style={{ width: '60px', height: '60px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}><ImageIcon size={20} className="text-[var(--color-gold)]" /></div>
+                    <button type="button" onClick={() => removePhoto(i)} style={{ position: 'absolute', top: '-5px', right: '-5px', background: 'red', border: 'none', color: 'white', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={12} /></button>
                   </div>
                 ))}
              </div>
           </div>
         )}
 
-        <button 
-          disabled={loading || submitted || detecting}
-          className={`submit-btn ${submitted ? 'success' : ''}`}
-        >
-          {loading ? <RefreshCw size={28} className="animate-spin" /> : 
-           submitted ? <CheckCircle2 size={28} /> : 
-           <><Navigation size={24} /> {t.submit}</>}
+        <button disabled={loading || submitted || detecting} className={`submit-btn ${submitted ? 'success' : ''}`}>
+          {loading ? <RefreshCw size={28} className="animate-spin" /> : submitted ? <CheckCircle2 size={28} /> : <><Navigation size={24} /> {t.submit}</>}
         </button>
       </form>
 
@@ -731,21 +620,10 @@ export default function App() {
         {submitted && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="success-overlay">
             <motion.div initial={{ scale: 0.9, y: 30 }} animate={{ scale: 1, y: 0 }} className="success-card">
-              <div style={{ width: '100px', height: '100px', background: 'rgba(46, 204, 113, 0.1)', borderRadius: '35px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2ecc71', margin: '0 auto 2rem', border: '1px solid rgba(46, 204, 113, 0.2)' }}>
-                <CheckCircle2 size={50} />
-              </div>
+              <div style={{ width: '100px', height: '100px', background: 'rgba(46, 204, 113, 0.1)', borderRadius: '35px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2ecc71', margin: '0 auto 2rem', border: '1px solid rgba(46, 204, 113, 0.2)' }}><CheckCircle2 size={50} /></div>
               <h2 style={{ fontSize: '2.5rem', fontWeight: 900, marginBottom: '0.5rem', fontFamily: 'var(--font-accent)' }}>{t.success}</h2>
               <p style={{ opacity: 0.5, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '4px', fontWeight: 900, marginBottom: '2rem' }}>HQ ALERTED</p>
-              
-              <a 
-                href={`https://wa.me/?text=${generateWhatsAppMessage()}`}
-                target="_blank"
-                rel="noreferrer"
-                className="submit-btn"
-                style={{ background: '#25D366', textDecoration: 'none', color: 'white' }}
-              >
-                <RefreshCw size={24} style={{ transform: 'rotate(45deg)' }} /> BROADCAST TO WHATSAPP
-              </a>
+              <a href={`https://wa.me/?text=${generateWhatsAppMessage()}`} target="_blank" rel="noreferrer" className="submit-btn" style={{ background: '#25D366', textDecoration: 'none', color: 'white' }}><RefreshCw size={24} style={{ transform: 'rotate(45deg)' }} /> BROADCAST TO WHATSAPP</a>
             </motion.div>
           </motion.div>
         )}
