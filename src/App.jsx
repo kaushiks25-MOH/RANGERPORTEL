@@ -183,14 +183,23 @@ export default function App() {
   const requestNotificationPermission = async () => {
     if ('Notification' in window) {
       const permission = await Notification.requestPermission();
+      
+      // Check Service Worker
+      let swStatus = "Unknown";
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        const hasOS = regs.some(r => r.active && r.active.scriptURL.includes('OneSignal'));
+        swStatus = hasOS ? "✅ Active" : "❌ Missing";
+      }
+
       if (permission === 'granted' && window.OneSignal) {
         window.OneSignal.push(async () => {
           await window.OneSignal.showNativePrompt();
           const id = await window.OneSignal.getUserId();
-          alert(id ? "✅ Subscribed! ID: " + id : "⏳ Waiting for OneSignal...");
+          alert(`🔔 Notification Status:\n• Permission: ${permission}\n• Engine: ${swStatus}\n• ID: ${id || 'Waiting...'}`);
         });
       } else {
-        alert("❌ Permission " + permission);
+        alert(`❌ Permission: ${permission}\n• Engine: ${swStatus}`);
       }
     } else {
       alert("❌ Browser does not support notifications");
