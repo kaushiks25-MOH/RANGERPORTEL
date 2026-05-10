@@ -10,10 +10,14 @@
     <title>AECRCMC Ranger Portal</title>
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
-      window.OneSignal = window.OneSignal || [];
-      OneSignal.push(function() {
-        OneSignal.init({
-          appId: "c270e59a-5b4e-4f3b-a9b4-9e6793331cdd", // Placeholder for actual ID
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      OneSignalDeferred.push(async function(OneSignal) {
+        await OneSignal.init({
+          appId: "c0f05ba1-1926-4a22-acb6-95cee85013c3",
+          safari_web_id: "web.onesignal.auto.13f7d09c-87f4-478e-9a86-b96c3b883b5b",
+          notifyButton: {
+            enable: true,
+          },
           allowLocalhostAsSecureOrigin: true,
         });
       });

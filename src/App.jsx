@@ -306,15 +306,13 @@ export default function App() {
       // Trigger Push Notification
       if (manualSeverity === 'HIGH' || manualSeverity === 'MEDIUM') {
         try {
-          const OneSignal = window.OneSignal;
-          if (OneSignal) {
-            OneSignal.push(() => {
-              OneSignal.sendSelfNotification(
-                `🚨 ${manualSeverity} ALERT: Elephant Sighting`,
-                `Location: ${form.range}. Check portal for photos & voice.`,
-                `${window.location.origin}/logo.png`
-              );
-            });
+          const OneSignal = window.OneSignal || (window.OneSignalDeferred && window.OneSignalDeferred[0]);
+          if (OneSignal && typeof OneSignal.sendSelfNotification === 'function') {
+            OneSignal.sendSelfNotification(
+              `🚨 ${manualSeverity} ALERT: Elephant Sighting`,
+              `Location: ${form.range}. Check portal for photos & voice.`,
+              `${window.location.origin}/logo.png`
+            );
           }
         } catch (e) { console.error("Notification trigger failed", e); }
       }
