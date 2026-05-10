@@ -366,10 +366,13 @@ export default function App() {
           });
           if (!response.ok) {
             const errData = await response.json();
-            alert("Broadcast Error: " + JSON.stringify(errData));
+            alert("❌ Broadcast Failed: " + JSON.stringify(errData));
           } else {
             const successData = await response.json();
-            alert("✅ GLOBAL ALERT SENT! ID: " + successData.id);
+            alert("✅ OneSignal Accepted!\nID: " + successData.id + "\nRecipients: " + successData.recipients);
+            if (successData.recipients === 0) {
+              alert("⚠️ WARNING: 0 Recipients found. Your phone is not in the 'All' group yet.");
+            }
           }
         } catch (e) { 
           console.error("Global Broadcast failed", e);
