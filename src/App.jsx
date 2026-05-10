@@ -124,35 +124,52 @@ export default function App() {
     { id: 'unidentified', label: { en: 'Unidentified', ta: 'அடையாளம் தெரியவில்லை' }, sub: 'Unclear view', img: '/logo.png', color: '#95a5a6' }
   ];
 
-  useEffect(() => {
-    if ('geolocation' in navigator) {
-      setDetecting(true);
-      watchIdRef.current = navigator.geolocation.watchPosition(
-        (pos) => {
-          const { latitude, longitude } = pos.coords;
-          setForm(prev => {
-            const updated = { ...prev, latitude, longitude };
-            let closest = RANGES[0];
-            let minDist = Infinity;
-            RANGES.forEach(r => {
-              const dist = Math.sqrt(Math.pow(latitude - r.lat, 2) + Math.pow(longitude - r.lng, 2));
-              if (dist < minDist) {
-                minDist = dist;
-                closest = r;
-              }
-            });
-            updated.range = closest.name;
-            return updated;
-          });
-          setDetecting(false);
-        },
-        (err) => {
-          console.error(err);
-          setDetecting(false);
-        },
-        { enableHighAccuracy: true, maximumAge: 1000, timeout: 5000 }
-      );
+  const [locationError, setLocationError] = useState(null);
+  
+  const requestLocation = () => {
+    if (!('geolocation' in navigator)) {
+      setLocationError("Geolocation not supported");
+      return;
     }
+    
+    setDetecting(true);
+    setLocationError(null);
+    
+    if (watchIdRef.current) navigator.geolocation.clearWatch(watchIdRef.current);
+    
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setForm(prev => {
+          const updated = { ...prev, latitude, longitude };
+          let closest = RANGES[0];
+          let minDist = Infinity;
+          RANGES.forEach(r => {
+            const dist = Math.sqrt(Math.pow(latitude - r.lat, 2) + Math.pow(longitude - r.lng, 2));
+            if (dist < minDist) {
+              minDist = dist;
+              closest = r;
+            }
+          });
+          updated.range = closest.name;
+          return updated;
+        });
+        setDetecting(false);
+        setLocationError(null);
+      },
+      (err) => {
+        console.error("GPS Error:", err);
+        setDetecting(false);
+        if (err.code === 1) setLocationError("PERMISSION_DENIED");
+        else if (err.code === 2) setLocationError("POSITION_UNAVAILABLE");
+        else if (err.code === 3) setLocationError("TIMEOUT");
+      },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+    );
+  };
+
+  useEffect(() => {
+    requestLocation();
     return () => {
       if (watchIdRef.current) navigator.geolocation.clearWatch(watchIdRef.current);
     };
@@ -363,10 +380,28 @@ export default function App() {
               <MapPin size={24} />
             </div>
             <div>
-              <p className="label" style={{ margin: 0 }}>{detecting ? t.detecting : t.detected}</p>
+              <p className="label" style={{ margin: 0 }}>
+                {locationError === 'PERMISSION_DENIED' ? 'GPS Blocked' : 
+                 locationError ? 'GPS Error' :
+                 detecting ? t.detecting : t.detected}
+              </p>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <p style={{ fontWeight: 900, fontSize: '1rem' }}>{form.range || '...'}</p>
-                {!detecting && <div className="pulse-dot"></div>}
+                <p style={{ fontWeight: 900, fontSize: '1rem', color: locationError ? '#ff4757' : 'white' }}>
+                  {locationError === 'PERMISSION_DENIED' ? 'Allow location in settings' :
+                   locationError ? 'Weak signal. Try again.' :
+                   form.range || '...'}
+                </p>
+                {!detecting && !locationError && <div className="pulse-dot"></div>}
+                {locationError && (
+                  <button 
+                    type="button" 
+                    onClick={requestLocation}
+                    className="tag active"
+                    style={{ padding: '2px 8px', fontSize: '0.6rem', marginLeft: '5px' }}
+                  >
+                    RETRY
+                  </button>
+                )}
               </div>
             </div>
           </div>
