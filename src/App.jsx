@@ -335,6 +335,9 @@ export default function App() {
           if (!response.ok) {
             const errData = await response.json();
             alert("Broadcast Error: " + JSON.stringify(errData));
+          } else {
+            const successData = await response.json();
+            alert("✅ GLOBAL ALERT SENT! ID: " + successData.id);
           }
         } catch (e) { 
           console.error("Global Broadcast failed", e);
@@ -399,6 +402,20 @@ export default function App() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button 
+            className="lang-toggle"
+            onClick={requestNotificationPermission}
+            style={{ 
+              background: '#2ecc71',
+              color: 'white',
+              fontSize: '0.6rem',
+              width: 'auto',
+              padding: '0 10px',
+              fontWeight: 900
+            }}
+          >
+            JOIN ALERTS
+          </button>
           <button 
             className={`lang-toggle ${locationError || !('Notification' in window && Notification.permission === 'granted') ? 'alert' : ''}`} 
             onClick={() => {
