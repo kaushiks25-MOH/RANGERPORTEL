@@ -1,0 +1,20 @@
+{
+  "short_name": "AECRCMC",
+  "name": "AECRCMC Ranger Portal",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#2c1810",
+  "background_color": "#2c1810"
+}
