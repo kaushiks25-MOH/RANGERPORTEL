@@ -10,7 +10,7 @@ export async function submitReport({
   latitude, 
   longitude, 
   range,
-  image,
+  images = [], // Changed from image to images array
   voice,
   reportType = 'SIGHTING',
   isClear = false,
@@ -31,18 +31,21 @@ export async function submitReport({
   chaseResult = '',
   remarks = ''
 }) {
-  let imageUrl = null;
+  const imageUrls = [null, null, null];
   let voiceUrl = null;
   
-  // Handle Image Upload
-  if (image) {
-    const fileExt = image.name?.split('.').pop() || 'jpg';
-    const fileName = `img_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-    const { error: uploadError } = await supabase.storage.from('evidence_photos').upload(fileName, image, {
-      contentType: image.type || 'image/jpeg'
-    });
-    if (uploadError) throw new Error('Image upload failed: ' + uploadError.message);
-    imageUrl = supabase.storage.from('evidence_photos').getPublicUrl(fileName).data.publicUrl;
+  // Handle Multiple Image Uploads
+  for (let i = 0; i < Math.min(images.length, 3); i++) {
+    const image = images[i];
+    if (image) {
+      const fileExt = image.name?.split('.').pop() || 'jpg';
+      const fileName = `img_${Date.now()}_${i}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage.from('evidence_photos').upload(fileName, image, {
+        contentType: image.type || 'image/jpeg'
+      });
+      if (uploadError) throw new Error(`Image ${i+1} upload failed: ` + uploadError.message);
+      imageUrls[i] = supabase.storage.from('evidence_photos').getPublicUrl(fileName).data.publicUrl;
+    }
   }
 
   // Handle Voice Upload
@@ -65,9 +68,12 @@ export async function submitReport({
       latitude: latitude,
       longitude: longitude,
       range: range,
-      image_url: imageUrl,
+      image_url: imageUrls[0],
+      image_url_2: imageUrls[1],
+      image_url_3: imageUrls[2],
       voice_url: voiceUrl,
       report_type: reportType,
+// ... (rest same)
       is_clear: isClear,
       damage_desc: damageDesc,
       casualties: casualties,

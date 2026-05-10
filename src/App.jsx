@@ -85,11 +85,52 @@ export default function App() {
     latitude: null,
     longitude: null,
     range: '',
-    image: null,
+    images: [null, null, null], // Array for 3 images
     voice: null,
     damageDesc: '',
     casualties: 0
   });
+
+  const compressImage = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 1024;
+          let width = img.width;
+          let height = img.height;
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob((blob) => {
+            resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+          }, 'image/jpeg', 0.7); // 70% quality
+        };
+      };
+    });
+  };
+
+  const handleImageChange = async (index, file) => {
+    if (!file) return;
+    setLoading(true);
+    const compressed = await compressImage(file);
+    setForm(prev => {
+      const next = [...prev.images];
+      next[index] = compressed;
+      return { ...prev, images: next };
+    });
+    setLoading(false);
+  };
+// ... (rest of the component)
   
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -472,19 +513,31 @@ export default function App() {
             )}
           </div>
 
-          <div className={`glass media-card ${form.image ? 'active' : ''}`}>
-            <input 
-              type="file" 
-              accept="image/*" 
-              capture="environment"
-              onChange={e => setForm({...form, image: e.target.files[0]})}
-              style={{ position: 'absolute', inset: 0, opacity: 0, zIndex: 10 }}
-            />
-            <div className="icon-box">
-              {form.image ? <CheckCircle2 size={24} /> : <Camera size={24} />}
+          {[0, 1, 2].map(idx => (
+            <div key={idx} className={`glass media-card ${form.images[idx] ? 'active' : ''}`} style={{ position: 'relative' }}>
+              <input 
+                type="file" 
+                accept="image/*" 
+                capture="environment"
+                onChange={e => handleImageChange(idx, e.target.files[0])}
+                style={{ position: 'absolute', inset: 0, opacity: 0, zIndex: 10, cursor: 'pointer' }}
+              />
+              <div className="icon-box">
+                {form.images[idx] ? <CheckCircle2 size={24} /> : <Camera size={24} />}
+              </div>
+              <span className="media-label">{form.images[idx] ? `PHOTO ${idx + 1}` : `PHOTO ${idx + 1}`}</span>
+              {form.images[idx] && (
+                <button 
+                  type="button" 
+                  onClick={(e) => { e.stopPropagation(); setForm(f => { const ni = [...f.images]; ni[idx] = null; return { ...f, images: ni }; }) }}
+                  className="tag" 
+                  style={{ position: 'absolute', top: '5px', right: '5px', borderRadius: '50%', width: '20px', height: '20px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <Trash2 size={12} />
+                </button>
+              )}
             </div>
-            <span className="media-label">{form.image ? 'ATTACHED' : t.photo}</span>
-          </div>
+          ))}
         </div>
 
         <button 
@@ -509,13 +562,15 @@ export default function App() {
               
               <a 
                 href={`https://wa.me/?text=${encodeURIComponent(
-                  `🚨 *AECRCMC EMERGENCY ALERT*\n\n` +
-                  `*Type:* ${type}\n` +
-                  `*Range:* ${form.range}\n` +
-                  `*Severity:* ${manualSeverity}\n` +
-                  `${type === 'SIGHTING' ? `*Count:* ${form.count}\n` : `*Damage:* ${form.damageDesc}\n`}` +
-                  `*Time:* ${new Date().toLocaleTimeString()}\n\n` +
-                  `🌍 _Location link and voice notes available on HQ Dashboard._`
+                  `🚨 *AECRCMC EMERGENCY ALERT*\n` +
+                  `🚨 *அவசர எச்சரிக்கை*\n\n` +
+                  `📍 *Range / சரகம்:* ${form.range}\n` +
+                  `🔥 *Severity / தீவிரம்:* ${manualSeverity === 'HIGH' ? '🔴 HIGH / அதிகம்' : manualSeverity === 'MEDIUM' ? '🟠 MEDIUM / நடுத்தரம்' : '🟢 LOW / குறைவு'}\n` +
+                  `🐘 *Count / எண்ணிக்கை:* ${form.count}\n` +
+                  `${type === 'CLEARANCE' ? `📜 *Damage / சேதம்:* ${form.damageDesc}\n` : ''}` +
+                  `📎 *Attachments:* ${form.images.filter(i=>i).length} Photos 📸, ${form.voice ? '1 Voice Note 🎤' : 'No Voice'}\n` +
+                  `⏰ *Time / நேரம்:* ${new Date().toLocaleTimeString()}\n\n` +
+                  `🌍 _Dashboard: Detailed location & media uploaded._`
                 )}`}
                 target="_blank"
                 rel="noreferrer"
