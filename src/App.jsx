@@ -363,14 +363,24 @@ export default function App() {
             <div className="field-group">
               <label className="label">Damage Assessment</label>
               <div className="tag-container">
-                {['No Damage', 'Crop Damage', 'Property Damage', 'Human Injury', 'Casualty'].map(tag => (
+                {[
+                  { label: 'No Damage', icon: '✅' },
+                  { label: 'Crop Damage', icon: '🌾' },
+                  { label: 'Property Damage', icon: '🏠' },
+                  { label: 'Human Injury', icon: '🩹' },
+                  { label: 'Casualty', icon: '🚑' }
+                ].map(item => (
                   <div 
-                    key={tag} 
-                    onClick={() => setForm({...form, damageDesc: tag})}
-                    className={`tag ${form.damageDesc === tag ? 'active' : ''}`}
-                    style={{ background: form.damageDesc === tag ? 'var(--color-gold)' : '' }}
+                    key={item.label} 
+                    onClick={() => setForm({...form, damageDesc: item.label})}
+                    className={`tag ${form.damageDesc === item.label ? 'active' : ''}`}
+                    style={{ 
+                      background: form.damageDesc === item.label ? 'var(--color-gold)' : '',
+                      padding: '10px 15px',
+                      fontSize: '0.7rem'
+                    }}
                   >
-                    {tag}
+                    <span style={{ marginRight: '5px' }}>{item.icon}</span> {item.label}
                   </div>
                 ))}
               </div>
@@ -385,7 +395,11 @@ export default function App() {
                 <button type="button" className="adj-btn" onClick={() => setForm(f => ({ ...f, casualties: Math.max(0, f.casualties - 1) }))}>
                   <Minus size={24} />
                 </button>
-                <div className="count-display" style={{ color: form.casualties > 0 ? 'red' : 'white' }}>{form.casualties}</div>
+                <div className="count-display" style={{ 
+                  color: form.casualties > 0 ? 'red' : 'white', 
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: '3rem'
+                }}>{form.casualties}</div>
                 <button type="button" className="adj-btn" onClick={() => setForm(f => ({ ...f, casualties: f.casualties + 1 }))}>
                   <Plus size={24} />
                 </button>
