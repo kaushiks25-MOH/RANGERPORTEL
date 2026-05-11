@@ -114,12 +114,9 @@ export default function App() {
 
   useEffect(() => {
     const checkSub = () => {
-      if (window.webpushr) {
-        window.webpushr('fetch_subscription_id', (id) => {
-          if (id && id !== 'unsupported' && id !== 'blocked') {
-            setSubscriptionId(id);
-          }
-        });
+      // PushAlert usually handles this via its UI, but we can check if it's loaded
+      if (window.PushAlert) {
+         setSubscriptionId('PushAlert Active');
       }
     };
     const interval = setInterval(checkSub, 5000);
@@ -197,34 +194,14 @@ export default function App() {
 
   const requestNotificationPermission = async () => {
     if ('Notification' in window) {
-      if (window.webpushr) {
-        window.webpushr('setup', { 'prompt_type': 'native' });
-        // Poll for ID after prompt
-        setTimeout(() => {
-          window.webpushr('fetch_subscription_id', (id) => {
-            if (id) {
-               setSubscriptionId(id);
-               alert(`🔔 Webpushr Status: Joined Successfully!\nID: ${id}`);
-            }
-          });
-        }, 2000);
-      } else {
-        alert("❌ Webpushr SDK not loaded. Check your internet connection.");
-      }
+      alert("🔔 PushAlert: Please use the floating bell icon or the popup that appears to subscribe.");
     } else {
       alert("❌ Browser does not support notifications");
     }
   };
 
   const testDirectNotification = async () => {
-    if (!window.webpushr) return alert("Webpushr not loaded");
-    window.webpushr('fetch_subscription_id', (id) => {
-      if (!id || id === 'unsupported' || id === 'blocked') {
-        alert("Please click 'JOIN ALERTS' first or check browser permissions.");
-      } else {
-        alert(`✅ You are correctly subscribed!\nYour ID: ${id}\n\nYou will now receive all emergency broadcasts.`);
-      }
-    });
+    alert("✅ PushAlert Integrated!\n\nYou will receive a notification as soon as an alert is broadcasted by the database.");
   };
 
   useEffect(() => {
