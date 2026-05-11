@@ -113,10 +113,13 @@ export default function App() {
   });
 
   useEffect(() => {
-    const checkSub = async () => {
-      if (window.OneSignal) {
-        const id = await window.OneSignal.getUserId();
-        setSubscriptionId(id);
+    const checkSub = () => {
+      if (window.webpushr) {
+        window.webpushr('fetch_subscription_id', (id) => {
+          if (id && id !== 'unsupported' && id !== 'blocked') {
+            setSubscriptionId(id);
+          }
+        });
       }
     };
     const interval = setInterval(checkSub, 5000);
@@ -194,24 +197,19 @@ export default function App() {
 
   const requestNotificationPermission = async () => {
     if ('Notification' in window) {
-      const permission = await Notification.requestPermission();
-      
-      // Check Service Worker
-      let swStatus = "Unknown";
-      if ('serviceWorker' in navigator) {
-        const regs = await navigator.serviceWorker.getRegistrations();
-        const hasOS = regs.some(r => r.active && r.active.scriptURL.includes('OneSignal'));
-        swStatus = hasOS ? "✅ Active" : "❌ Missing";
-      }
-
-      if (permission === 'granted' && window.OneSignal) {
-        window.OneSignal.push(async () => {
-          await window.OneSignal.showNativePrompt();
-          const id = await window.OneSignal.getUserId();
-          alert(`🔔 Notification Status:\n• Permission: ${permission}\n• Engine: ${swStatus}\n• ID: ${id || 'Waiting...'}`);
-        });
+      if (window.webpushr) {
+        window.webpushr('setup', { 'prompt_type': 'native' });
+        // Poll for ID after prompt
+        setTimeout(() => {
+          window.webpushr('fetch_subscription_id', (id) => {
+            if (id) {
+               setSubscriptionId(id);
+               alert(`🔔 Webpushr Status: Joined Successfully!\nID: ${id}`);
+            }
+          });
+        }, 2000);
       } else {
-        alert(`❌ Permission: ${permission}\n• Engine: ${swStatus}`);
+        alert("❌ Webpushr SDK not loaded. Check your internet connection.");
       }
     } else {
       alert("❌ Browser does not support notifications");
@@ -219,27 +217,14 @@ export default function App() {
   };
 
   const testDirectNotification = async () => {
-    if (!window.OneSignal) return alert("OneSignal not loaded");
-    const userId = await window.OneSignal.getUserId();
-    if (!userId) return alert("Please click 'JOIN ALERTS' first!");
-
-    try {
-      const ONESIGNAL_APP_ID = "c0f05ba1-1926-4a22-acb6-95cee85013c3";
-      const ONESIGNAL_REST_KEY = "os_v2_app_ydyfxiizezfcflfwsxhoquatynyfx2yovw3etevsupzrj2ujidlmyyjht5rs3jgabd7fezftfnbiloj7qwcs4jzx6mb2z5obggipbmq";
-      
-      const response = await fetch("https://onesignal.com/api/v1/notifications", {
-        method: "POST",
-        headers: { "Content-Type": "application/json; charset=utf-8", "Authorization": `Basic ${ONESIGNAL_REST_KEY}` },
-        body: JSON.stringify({
-          app_id: ONESIGNAL_APP_ID,
-          include_player_ids: [userId],
-          headings: { en: "🔔 TEST SUCCESSFUL!" },
-          contents: { en: "Your phone is correctly linked to AECRCMC alerts." }
-        })
-      });
-      if (response.ok) alert("Test signal sent to your phone! Wait 5 seconds.");
-      else alert("Test failed: " + await response.text());
-    } catch (e) { alert("Test Error: " + e.message); }
+    if (!window.webpushr) return alert("Webpushr not loaded");
+    window.webpushr('fetch_subscription_id', (id) => {
+      if (!id || id === 'unsupported' || id === 'blocked') {
+        alert("Please click 'JOIN ALERTS' first or check browser permissions.");
+      } else {
+        alert(`✅ You are correctly subscribed!\nYour ID: ${id}\n\nYou will now receive all emergency broadcasts.`);
+      }
+    });
   };
 
   useEffect(() => {
@@ -378,42 +363,8 @@ export default function App() {
 
       if ('vibrate' in navigator) navigator.vibrate([500, 200, 500, 200, 500]);
 
-      // Trigger Global Push Notification
-      if (manualSeverity === 'HIGH' || manualSeverity === 'MEDIUM') {
-        try {
-          const ONESIGNAL_APP_ID = "c0f05ba1-1926-4a22-acb6-95cee85013c3";
-          const ONESIGNAL_REST_KEY = "os_v2_app_ydyfxiizezfcflfwsxhoquatynyfx2yovw3etevsupzrj2ujidlmyyjht5rs3jgabd7fezftfnbiloj7qwcs4jzx6mb2z5obggipbmq";
-          
-          const response = await fetch("https://onesignal.com/api/v1/notifications", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json; charset=utf-8",
-              "Authorization": `Basic ${ONESIGNAL_REST_KEY}`
-            },
-            body: JSON.stringify({
-              app_id: ONESIGNAL_APP_ID,
-              included_segments: ["All", "Subscribed Users"],
-              headings: { en: `🚨 ${manualSeverity} ALERT: Elephant Sighting`, ta: `🚨 ${manualSeverity === 'HIGH' ? 'அதிக' : 'நடுத்தர'} எச்சரிக்கை` },
-              contents: { en: `Location: ${form.range}. Check portal for photos & voice.`, ta: `${form.range} பகுதியில் யானை நடமாட்டம். புகைப்படங்களை சரிபார்க்கவும்.` },
-              chrome_web_icon: `${window.location.origin}/logo.png`,
-              data: { report_id: result.id }
-            })
-          });
-          if (!response.ok) {
-            const errData = await response.json();
-            alert("❌ Broadcast Failed: " + JSON.stringify(errData));
-          } else {
-            const successData = await response.json();
-            alert("✅ OneSignal Accepted!\nID: " + successData.id + "\nRecipients: " + successData.recipients);
-            if (successData.recipients === 0) {
-              alert("⚠️ WARNING: 0 Recipients found. Your phone is not in the 'All' group yet.");
-            }
-          }
-        } catch (e) { 
-          console.error("Global Broadcast failed", e);
-          alert("Network Error: Could not reach OneSignal. (Check if CORS is blocked)");
-        }
-      }
+      // Note: Global broadcast is now handled by the Supabase trigger via Webpushr REST API.
+      // We no longer trigger it from the frontend to keep the REST API key secure.
 
       setSubmittedResult(result);
       setSubmitted(true);
