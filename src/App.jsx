@@ -394,29 +394,40 @@ export default function App() {
     const severityEmoji = manualSeverity === 'HIGH' ? '🔴' : manualSeverity === 'MEDIUM' ? '🟠' : '🟢';
     const photosCount = (submittedResult.image_urls?.length || (submittedResult.image_url ? 1 : 0));
     
-    let msg = isClearance 
-      ? `✅ *AECRCMC AREA CLEARANCE*\n✅ *சரகம் பாதுகாப்பானது*\n\n`
-      : `🚨 *AECRCMC EMERGENCY ALERT*\n🚨 *அவசர எச்சரிக்கை*\n\n`;
-
-    msg += `📍 *Range / சரகம்:* ${submittedResult.range}\n`;
-    msg += `🌍 *Map / வரைபடம்:* https://www.google.com/maps?q=${submittedResult.latitude},${submittedResult.longitude}\n`;
+    let msg = `━━━━━━━━━━━━━━━\n`;
+    msg += `🐘 *AECRCMC FIELD REPORT*\n`;
+    msg += `━━━━━━━━━━━━━━━\n\n`;
     
+    msg += isClearance 
+      ? `✅ *STATUS: AREA CLEARED*\n✅ *நிலை: பாதுகாப்பானது*\n\n`
+      : `🚨 *STATUS: EMERGENCY ALERT*\n🚨 *நிலை: அவசர எச்சரிக்கை*\n\n`;
+
+    msg += `📍 *RANGE / சரகம்:*\n${submittedResult.range}\n\n`;
+    
+    msg += `🌍 *GOOGLE MAPS:*\nhttps://www.google.com/maps?q=${submittedResult.latitude},${submittedResult.longitude}\n\n`;
+    
+    msg += `🔥 *DETAILS / விவரங்கள்:*\n`;
     if (isClearance) {
-      msg += `🛡️ *Status / நிலை:* Area Secured & Clear / பகுதி பாதுகாக்கப்பட்டது\n`;
+      msg += `• Post-Conflict Status: Secured\n`;
     } else {
-      msg += `🔥 *Severity / தீவிரம்:* ${severityEmoji} ${manualSeverity}\n`;
-      msg += `🐘 *Count / எண்ணிக்கை:* ${submittedResult.elephant_count}\n`;
+      msg += `• Severity: ${manualSeverity} ${severityEmoji}\n`;
+      msg += `• Elephant Count: ${submittedResult.elephant_count}\n`;
     }
 
-    if (submittedResult.damage_desc) msg += `📜 *Notes / குறிப்பு:* ${submittedResult.damage_desc}\n`;
+    if (submittedResult.damage_desc) {
+      msg += `\n📜 *FIELD NOTES / குறிப்பு:*\n${submittedResult.damage_desc}\n`;
+    }
     
-    msg += `\n📎 *Evidence / ஆதாரங்கள்:* ${photosCount} Photos 📸${submittedResult.voice_url ? ', 1 Voice Note 🎤' : ''}\n`;
+    msg += `\n📎 *EVIDENCE / ஆதாரங்கள்:*\n`;
+    msg += `• Photos: ${photosCount} 📸\n`;
+    if (submittedResult.voice_url) msg += `• Voice Note: Recorded 🎤\n`;
     
-    if (submittedResult.image_url) msg += `🖼️ *Photo:* ${submittedResult.image_url}\n`;
-    if (submittedResult.voice_url) msg += `🎤 *Voice:* ${submittedResult.voice_url}\n`;
+    if (submittedResult.image_url) msg += `\n🖼️ *LATEST PHOTO:*\n${submittedResult.image_url}\n`;
+    if (submittedResult.voice_url) msg += `\n🎤 *VOICE RECORDING:*\n${submittedResult.voice_url}\n`;
     
-    msg += `\n⏰ *Time / நேரம்:* ${new Date(submittedResult.created_at).toLocaleTimeString()}\n`;
-    msg += `🌍 _Sent via AECRCMC Ranger Portal_`;
+    msg += `\n⏰ *TIME / நேரம்:* ${new Date(submittedResult.created_at).toLocaleString()}\n\n`;
+    msg += `_Sent via AECRCMC Intelligence System_\n`;
+    msg += `━━━━━━━━━━━━━━━`;
     
     return encodeURIComponent(msg);
   };
