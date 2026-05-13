@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { submitReport, getRecentReports } from './lib/api';
+import { supabase } from './lib/supabase';
 
 const RANGES = [
   { name: 'Mettupalayam', lat: 11.3000, lng: 76.9500 },
