@@ -399,6 +399,7 @@ export default function App() {
       : `🚨 *AECRCMC EMERGENCY ALERT*\n🚨 *அவசர எச்சரிக்கை*\n\n`;
 
     msg += `📍 *Range / சரகம்:* ${submittedResult.range}\n`;
+    msg += `🌍 *Map / வரைபடம்:* https://www.google.com/maps?q=${submittedResult.latitude},${submittedResult.longitude}\n`;
     
     if (isClearance) {
       msg += `🛡️ *Status / நிலை:* Area Secured & Clear / பகுதி பாதுகாக்கப்பட்டது\n`;
@@ -480,7 +481,18 @@ export default function App() {
                     <p style={{ fontSize: '0.75rem', fontWeight: 700, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {alert.elephant_count} Elephants
                     </p>
-                    <p style={{ fontSize: '0.6rem', opacity: 0.5, marginTop: '0.25rem' }}>{new Date(alert.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.25rem' }}>
+                       <a 
+                        href={`https://www.google.com/maps?q=${alert.latitude},${alert.longitude}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ fontSize: '0.6rem', color: 'white', opacity: 0.4, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '2px' }}
+                      >
+                        <MapPin size={10} /> {alert.latitude?.toFixed(4)}, {alert.longitude?.toFixed(4)}
+                      </a>
+                    </div>
+                    <p style={{ fontSize: '0.6rem', opacity: 0.4, marginTop: '0.25rem' }}>{new Date(alert.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                   </div>
                 ))}
               </div>
@@ -648,6 +660,14 @@ export default function App() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                     <AlertTriangle size={12} /> {alert.severity || 'LOW'}
                   </div>
+                  <a 
+                    href={`https://www.google.com/maps?q=${alert.latitude},${alert.longitude}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'inherit', textDecoration: 'none', opacity: 0.6 }}
+                  >
+                    <MapPin size={12} /> {alert.latitude?.toFixed(4)}, {alert.longitude?.toFixed(4)}
+                  </a>
                   {alert.image_url && <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><ImageIcon size={12} /> Photo</div>}
                   {alert.voice_url && <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Mic size={12} /> Voice</div>}
                 </div>
