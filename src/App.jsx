@@ -390,19 +390,33 @@ export default function App() {
 
   const generateWhatsAppMessage = () => {
     if (!submittedResult) return '';
+    const isClearance = submittedResult.report_type === 'CLEARANCE';
     const severityEmoji = manualSeverity === 'HIGH' ? '🔴' : manualSeverity === 'MEDIUM' ? '🟠' : '🟢';
-    const photosCount = submittedResult.image_urls?.length || 0;
-    let msg = `🚨 *AECRCMC EMERGENCY ALERT*\n`;
-    msg += `🚨 *அவசர எச்சரிக்கை*\n\n`;
+    const photosCount = (submittedResult.image_urls?.length || (submittedResult.image_url ? 1 : 0));
+    
+    let msg = isClearance 
+      ? `✅ *AECRCMC AREA CLEARANCE*\n✅ *சரகம் பாதுகாப்பானது*\n\n`
+      : `🚨 *AECRCMC EMERGENCY ALERT*\n🚨 *அவசர எச்சரிக்கை*\n\n`;
+
     msg += `📍 *Range / சரகம்:* ${submittedResult.range}\n`;
-    msg += `🔥 *Severity / தீவிரம்:* ${severityEmoji} ${manualSeverity}\n`;
-    msg += `🐘 *Count / எண்ணிக்கை:* ${submittedResult.elephant_count}\n`;
-    if (submittedResult.damage_desc) msg += `📜 *Damage / சேதம்:* ${submittedResult.damage_desc}\n`;
-    msg += `📎 *Attachments:* ${photosCount} Photos 📸, ${submittedResult.voice_url ? '1 Voice Note 🎤' : 'No Voice'}\n\n`;
-    if (submittedResult.image_url) msg += `🖼️ *Photo 1:* ${submittedResult.image_url}\n`;
-    if (submittedResult.voice_url) msg += `🎤 *Voice Note:* ${submittedResult.voice_url}\n`;
+    
+    if (isClearance) {
+      msg += `🛡️ *Status / நிலை:* Area Secured & Clear / பகுதி பாதுகாக்கப்பட்டது\n`;
+    } else {
+      msg += `🔥 *Severity / தீவிரம்:* ${severityEmoji} ${manualSeverity}\n`;
+      msg += `🐘 *Count / எண்ணிக்கை:* ${submittedResult.elephant_count}\n`;
+    }
+
+    if (submittedResult.damage_desc) msg += `📜 *Notes / குறிப்பு:* ${submittedResult.damage_desc}\n`;
+    
+    msg += `\n📎 *Evidence / ஆதாரங்கள்:* ${photosCount} Photos 📸${submittedResult.voice_url ? ', 1 Voice Note 🎤' : ''}\n`;
+    
+    if (submittedResult.image_url) msg += `🖼️ *Photo:* ${submittedResult.image_url}\n`;
+    if (submittedResult.voice_url) msg += `🎤 *Voice:* ${submittedResult.voice_url}\n`;
+    
     msg += `\n⏰ *Time / நேரம்:* ${new Date(submittedResult.created_at).toLocaleTimeString()}\n`;
-    msg += `🌍 _Dashboard: Full gallery uploaded._`;
+    msg += `🌍 _Sent via AECRCMC Ranger Portal_`;
+    
     return encodeURIComponent(msg);
   };
 
