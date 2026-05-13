@@ -113,3 +113,33 @@ export async function getRecentReports(limit = 20) {
   if (error) throw new Error('Failed to fetch recent reports: ' + error.message);
   return data;
 }
+
+/**
+ * Fetches active alerts (Sightings not yet cleared by a newer clearance with evidence)
+ */
+export async function getActiveAlerts() {
+  // We fetch the last 50 reports and handle the logic in the frontend for simplicity 
+  // or we could do a more complex RPC call.
+  const { data, error } = await supabase
+    .from('reports')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  if (error) throw new Error('Failed to fetch alerts: ' + error.message);
+  
+  // Logic: For each range, find the latest report that is either a SIGHTING 
+  // or a CLEARANCE with evidence.
+  const ranges = {};
+  data.forEach(report => {
+    if (!ranges[report.range]) {
+      // If it's a sighting, it's definitely an candidate for active alert.
+      // If it's a clearance, it only 'counts' as a clearing event if it has evidence.
+      if (report.report_type === 'SIGHTING' || (report.report_type === 'CLEARANCE' && (report.image_url || report.voice_url))) {
+        ranges[report.range] = report;
+      }
+    }
+  });
+
+  return Object.values(ranges).filter(r => r.report_type === 'SIGHTING');
+}

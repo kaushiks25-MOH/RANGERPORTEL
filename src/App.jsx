@@ -22,7 +22,7 @@ import {
   Info
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { submitReport, getRecentReports } from './lib/api';
+import { submitReport, getRecentReports, getActiveAlerts } from './lib/api';
 import { supabase } from './lib/supabase';
 
 const RANGES = [
@@ -123,6 +123,7 @@ export default function App() {
   });
 
   const [recentAlerts, setRecentAlerts] = useState([]);
+  const [activeAlerts, setActiveAlerts] = useState([]);
   const [fetchingAlerts, setFetchingAlerts] = useState(false);
 
   useEffect(() => {
@@ -146,8 +147,12 @@ export default function App() {
   const fetchAlerts = async () => {
     setFetchingAlerts(true);
     try {
-      const data = await getRecentReports(20);
-      setRecentAlerts(data);
+      const [history, active] = await Promise.all([
+        getRecentReports(20),
+        getActiveAlerts()
+      ]);
+      setRecentAlerts(history);
+      setActiveAlerts(active);
     } catch (err) {
       console.error("Failed to fetch alerts:", err);
     } finally {
@@ -156,9 +161,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (view === 'ALERTS') {
-      fetchAlerts();
-    }
+    fetchAlerts();
   }, [view]);
   
   const mediaRecorderRef = useRef(null);
@@ -436,6 +439,39 @@ export default function App() {
       
       {view === 'FORM' ? (
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
+          {activeAlerts.length > 0 && (
+            <div className="active-alerts-banner" style={{ marginBottom: '1.5rem' }}>
+              <div className="label" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div className="pulse-dot" style={{ background: '#ff4757' }}></div> 
+                LIVE CONFLICTS ({activeAlerts.length})
+              </div>
+              <div style={{ display: 'flex', overflowX: 'auto', gap: '0.75rem', paddingBottom: '0.5rem' }} className="no-scrollbar">
+                {activeAlerts.map(alert => (
+                  <div 
+                    key={alert.id} 
+                    className="glass alert-card-mini" 
+                    onClick={() => {
+                      // Pre-fill range if clicked
+                      setForm(prev => ({ ...prev, range: alert.range }));
+                    }}
+                    style={{ 
+                      flex: '0 0 160px', 
+                      padding: '0.75rem', 
+                      borderLeft: `4px solid ${alert.severity === 'HIGH' ? '#ff4757' : alert.severity === 'MEDIUM' ? '#f1c40f' : '#2ecc71'}`,
+                      background: 'rgba(255,255,255,0.05)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <p style={{ fontSize: '0.7rem', fontWeight: 900, color: 'var(--color-gold)', marginBottom: '0.25rem' }}>{alert.range}</p>
+                    <p style={{ fontSize: '0.75rem', fontWeight: 700, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {alert.elephant_count} Elephants
+                    </p>
+                    <p style={{ fontSize: '0.6rem', opacity: 0.5, marginTop: '0.25rem' }}>{new Date(alert.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
 
           <div className="type-selector">

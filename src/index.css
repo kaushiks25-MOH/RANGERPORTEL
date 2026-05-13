@@ -505,3 +505,20 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(193, 154, 107, 0.4);
 }
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.alert-card-mini {
+  border-radius: 16px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.08);
+  transition: all 0.2s ease;
+}
+.alert-card-mini:active {
+  transform: scale(0.95);
+}
