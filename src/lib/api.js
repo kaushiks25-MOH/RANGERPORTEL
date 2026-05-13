@@ -99,3 +99,17 @@ export async function submitReport({
   if (error) throw new Error('Failed to save report: ' + error.message);
   return data;
 }
+
+/**
+ * Fetches recent reports for the Notification History
+ */
+export async function getRecentReports(limit = 20) {
+  const { data, error } = await supabase
+    .from('reports')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw new Error('Failed to fetch recent reports: ' + error.message);
+  return data;
+}

@@ -15,10 +15,14 @@ import {
   Minus,
   Navigation2,
   Trash2,
-  Image as ImageIcon
+  Bell,
+  History,
+  Image as ImageIcon,
+  ChevronRight,
+  Info
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { submitReport } from './lib/api';
+import { submitReport, getRecentReports } from './lib/api';
 
 const RANGES = [
   { name: 'Mettupalayam', lat: 11.3000, lng: 76.9500 },
@@ -51,7 +55,9 @@ const translations = {
     high: 'HIGH',
     medium: 'MEDIUM',
     low: 'LOW',
-    tags: ['Crop Damage', 'Village Near', 'Heading North', 'Moving Fast', 'Single Male']
+    tags: ['Crop Damage', 'Village Near', 'Heading North', 'Moving Fast', 'Single Male'],
+    alertsTitle: 'Recent Alerts',
+    noAlerts: 'No recent alerts found.'
   },
   ta: {
     title: 'AECRCMC',
@@ -73,12 +79,15 @@ const translations = {
     high: 'அதிகம்',
     medium: 'நடுத்தரம்',
     low: 'குறைவு',
-    tags: ['பயிர் சேதம்', 'கிராமம் அருகில்', 'வடக்கு நோக்கி', 'வேகமாக நகர்கிறது', 'ஒற்றை யானை']
+    tags: ['பயிர் சேதம்', 'கிராமம் அருகில்', 'வடக்கு நோக்கி', 'வேகமாக நகர்கிறது', 'ஒற்றை யானை'],
+    alertsTitle: 'சமீபத்திய அறிவிப்புகள்',
+    noAlerts: 'சமீபத்திய அறிவிப்புகள் எதுவும் இல்லை.'
   }
 };
 
 export default function App() {
   const [lang, setLang] = useState('en');
+  const [view, setView] = useState('FORM'); // FORM | ALERTS
   const [type, setType] = useState('SIGHTING');
   const [form, setForm] = useState({
     count: 0,
@@ -112,16 +121,52 @@ export default function App() {
     unidentified: 0
   });
 
+  const [recentAlerts, setRecentAlerts] = useState([]);
+  const [fetchingAlerts, setFetchingAlerts] = useState(false);
+
   useEffect(() => {
     const checkSub = () => {
-      // PushAlert usually handles this via its UI, but we can check if it's loaded
       if (window.PushAlert) {
          setSubscriptionId('PushAlert Active');
       }
     };
     const interval = setInterval(checkSub, 5000);
-    return () => clearInterval(interval);
-  }, []);
+    
+    // Supabase Real-time for live alerts
+    const channel = supabase
+      .channel('public:reports')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'reports' }, (payload) => {
+        setRecentAlerts(prev => [payload.new, ...prev].slice(0, 20));
+        if (view !== 'ALERTS') {
+          // You could add a toast here or just the badge is fine
+          console.log("New Alert Received!", payload.new);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      clearInterval(interval);
+      supabase.removeChannel(channel);
+    };
+  }, [view]);
+
+  const fetchAlerts = async () => {
+    setFetchingAlerts(true);
+    try {
+      const data = await getRecentReports(20);
+      setRecentAlerts(data);
+    } catch (err) {
+      console.error("Failed to fetch alerts:", err);
+    } finally {
+      setFetchingAlerts(false);
+    }
+  };
+
+  useEffect(() => {
+    if (view === 'ALERTS') {
+      fetchAlerts();
+    }
+  }, [view]);
   
   const mediaRecorderRef = useRef(null);
   const watchIdRef = useRef(null);
@@ -317,7 +362,6 @@ export default function App() {
         remarks: counts.unidentified > 0 ? `Unidentified: ${counts.unidentified}` : ''
       });
       
-      // Trigger Local Native Notification (Instant)
       if ('serviceWorker' in navigator && 'Notification' in window) {
         if (Notification.permission === 'granted') {
           navigator.serviceWorker.ready.then(registration => {
@@ -330,7 +374,7 @@ export default function App() {
           });
         }
       }
-      // Play Emergency Siren Sound
+      
       const playSiren = () => {
         const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
         audio.volume = 1.0;
@@ -339,9 +383,6 @@ export default function App() {
       playSiren();
 
       if ('vibrate' in navigator) navigator.vibrate([500, 200, 500, 200, 500]);
-
-      // Note: Global broadcast is now handled by the Supabase trigger via Webpushr REST API.
-      // We no longer trigger it from the frontend to keep the REST API key secure.
 
       setSubmittedResult(result);
       setSubmitted(true);
@@ -363,10 +404,8 @@ export default function App() {
 
   const generateWhatsAppMessage = () => {
     if (!submittedResult) return '';
-    
     const severityEmoji = manualSeverity === 'HIGH' ? '🔴' : manualSeverity === 'MEDIUM' ? '🟠' : '🟢';
     const photosCount = submittedResult.image_urls?.length || 0;
-    
     let msg = `🚨 *AECRCMC EMERGENCY ALERT*\n`;
     msg += `🚨 *அவசர எச்சரிக்கை*\n\n`;
     msg += `📍 *Range / சரகம்:* ${submittedResult.range}\n`;
@@ -374,53 +413,37 @@ export default function App() {
     msg += `🐘 *Count / எண்ணிக்கை:* ${submittedResult.elephant_count}\n`;
     if (submittedResult.damage_desc) msg += `📜 *Damage / சேதம்:* ${submittedResult.damage_desc}\n`;
     msg += `📎 *Attachments:* ${photosCount} Photos 📸, ${submittedResult.voice_url ? '1 Voice Note 🎤' : 'No Voice'}\n\n`;
-    
     if (submittedResult.image_url) msg += `🖼️ *Photo 1:* ${submittedResult.image_url}\n`;
-    if (submittedResult.image_url_2) msg += `🖼️ *Photo 2:* ${submittedResult.image_url_2}\n`;
     if (submittedResult.voice_url) msg += `🎤 *Voice Note:* ${submittedResult.voice_url}\n`;
-    
     msg += `\n⏰ *Time / நேரம்:* ${new Date(submittedResult.created_at).toLocaleTimeString()}\n`;
     msg += `🌍 _Dashboard: Full gallery uploaded._`;
-    
     return encodeURIComponent(msg);
   };
 
   return (
     <div className="portal-container">
-      <header className="header">
+      <header className="header glass" style={{ borderBottom: '1px solid var(--glass-border)', borderRadius: '0 0 30px 30px', margin: '0 -1.5rem 2rem', padding: '1rem 1.5rem' }}>
         <div className="logo-container">
-          <div className="logo-circle">
+          <div className="logo-circle" onClick={() => setView('FORM')} style={{ cursor: 'pointer' }}>
             <img src="/logo.png" alt="AECRCMC" />
           </div>
           <div>
-            <h1 style={{ fontFamily: 'var(--font-accent)', fontSize: '1.6rem', color: 'var(--color-gold)', fontWeight: 900 }}>{t.title}</h1>
-            <p className="label" style={{ margin: 0, opacity: 0.5, letterSpacing: '3px' }}>{t.subtitle}</p>
+            <h1 style={{ fontFamily: 'var(--font-accent)', fontSize: '1.4rem', color: 'var(--color-gold)', fontWeight: 900, lineHeight: 1 }}>{t.title}</h1>
+            <p className="label" style={{ margin: 0, opacity: 0.5, letterSpacing: '2px', fontSize: '0.5rem' }}>{t.subtitle}</p>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
           <button 
-            className="lang-toggle"
-            onClick={requestNotificationPermission}
-            style={{ background: '#2ecc71', color: 'white', fontSize: '0.6rem', width: 'auto', padding: '0 10px', fontWeight: 900 }}
-          >
-            JOIN ALERTS
-          </button>
-          <button 
-            className="lang-toggle"
-            onClick={testDirectNotification}
-            style={{ background: '#3498db', color: 'white', fontSize: '0.6rem', width: 'auto', padding: '0 10px', fontWeight: 900 }}
-          >
-            TEST ME
-          </button>
-          <button 
-            className={`lang-toggle ${locationError || !('Notification' in window && Notification.permission === 'granted') ? 'alert' : ''}`} 
-            onClick={() => { requestLocation(); requestNotificationPermission(); }}
+            className={`lang-toggle ${view === 'ALERTS' ? 'active' : ''}`}
+            onClick={() => setView(view === 'FORM' ? 'ALERTS' : 'FORM')}
             style={{ 
-              background: (locationError || (window.Notification && Notification.permission !== 'granted')) ? 'rgba(255, 71, 87, 0.2)' : '',
-              border: (locationError || (window.Notification && Notification.permission !== 'granted')) ? '1px solid #ff4757' : ''
+              background: view === 'ALERTS' ? 'var(--color-gold)' : 'rgba(255,255,255,0.05)',
+              color: view === 'ALERTS' ? 'var(--color-coffee)' : 'var(--color-gold)',
+              position: 'relative'
             }}
           >
-            <ShieldCheck size={22} color={(locationError || (window.Notification && Notification.permission !== 'granted')) ? '#ff4757' : 'currentColor'} />
+            {view === 'FORM' ? <Bell size={22} /> : <History size={22} />}
+            {view === 'FORM' && <div className="notification-count">!</div>}
           </button>
           <button className="lang-toggle" onClick={() => setLang(lang === 'en' ? 'ta' : 'en')}>
             <Globe size={22} />
@@ -428,195 +451,187 @@ export default function App() {
         </div>
       </header>
       
-      {!subscriptionId && !loading && (
-        <div 
-          onClick={requestNotificationPermission}
-          style={{ 
-            background: '#ff4757', 
-            color: 'white', 
-            padding: '12px', 
-            textAlign: 'center', 
-            fontSize: '0.8rem', 
-            fontWeight: 900,
-            cursor: 'pointer',
-            animation: 'pulse 2s infinite'
-          }}
-        >
-          🚨 ALERT SYSTEM DISCONNECTED! TAP HERE TO JOIN
-        </div>
-      )}
-
-      {window.location.protocol === 'http:' && window.location.hostname !== 'localhost' && (
-        <div style={{ background: '#ff4757', color: 'white', fontSize: '0.7rem', padding: '5px', textAlign: 'center', fontWeight: 900 }}>
-          ⚠️ SECURITY ERROR: GPS & NOTIFICATIONS REQUIRE HTTPS
-        </div>
-      )}
-
-      <div className="type-selector">
-        <button 
-          onClick={() => setType('SIGHTING')}
-          className={`type-btn ${type === 'SIGHTING' ? 'active sighting' : ''}`}
-        >
-          <Navigation2 size={18} /> {t.sighting}
-        </button>
-        <button 
-          onClick={() => setType('CLEARANCE')}
-          className={`type-btn ${type === 'CLEARANCE' ? 'active clearance' : ''}`}
-        >
-          <ShieldCheck size={18} /> {t.clearance}
-        </button>
-      </div>
-
-      <form onSubmit={handleSubmit} className="form-section">
-        <div className="glass info-card">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div className="icon-box" style={{ background: 'var(--color-gold)', color: 'var(--color-coffee)' }}>
-              <MapPin size={24} />
+      {view === 'FORM' ? (
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
+          {!subscriptionId && !loading && (
+            <div 
+              onClick={requestNotificationPermission}
+              style={{ 
+                background: 'linear-gradient(90deg, #ff4757, #ff6b81)', 
+                color: 'white', 
+                padding: '12px', 
+                textAlign: 'center', 
+                fontSize: '0.75rem', 
+                fontWeight: 900,
+                borderRadius: '16px',
+                marginBottom: '1.5rem',
+                cursor: 'pointer',
+                boxShadow: '0 8px 20px rgba(255, 71, 87, 0.3)'
+              }}
+            >
+              🚨 ALERT SYSTEM DISCONNECTED! TAP HERE TO JOIN
             </div>
-            <div>
-              <p className="label" style={{ margin: 0 }}>
-                {locationError === 'PERMISSION_DENIED' ? 'GPS Blocked' : 
-                 locationError ? 'GPS Error' :
-                 detecting ? t.detecting : t.detected}
-              </p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <p style={{ fontWeight: 900, fontSize: '1rem', color: locationError ? '#ff4757' : 'white' }}>
-                  {locationError === 'PERMISSION_DENIED' ? 'Allow location in settings' :
-                   locationError ? 'Weak signal. Try again.' :
-                   form.range || '...'}
-                </p>
-                {!detecting && !locationError && <div className="pulse-dot"></div>}
-                {locationError && (
-                  <button type="button" onClick={requestLocation} className="tag active" style={{ padding: '2px 8px', fontSize: '0.6rem', marginLeft: '5px' }}>
-                    RETRY
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-          <div 
-            className={`severity-badge ${manualSeverity.toLowerCase()}`}
-            onClick={() => {
-              const levels = ['LOW', 'MEDIUM', 'HIGH'];
-              const next = levels[(levels.indexOf(manualSeverity) + 1) % 3];
-              setManualSeverity(next);
-            }}
-            style={{ cursor: 'pointer', transition: 'all 0.3s ease', border: '1px solid rgba(255,255,255,0.2)' }}
-          >
-            {manualSeverity}
-          </div>
-        </div>
+          )}
 
-        {type === 'SIGHTING' && (
-          <div className="field-group">
-            <label className="label" style={{ marginBottom: '1rem' }}>Sighting Categories</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
-              {ELEPHANT_TYPES.map(cat => (
-                <div 
-                  key={cat.id} 
-                  className={`glass media-card ${counts[cat.id] > 0 ? 'active' : ''}`}
-                  onClick={() => adjustCount(cat.id, 1)}
-                  style={{ padding: '1.25rem', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', border: counts[cat.id] > 0 ? `2px solid ${cat.color}` : '1px solid rgba(255,255,255,0.05)' }}
-                >
-                  <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ width: '60px', height: '60px', borderRadius: '15px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
-                      <img src={cat.img} alt={cat.id} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white', margin: 0 }}>{lang === 'en' ? cat.label.en : cat.label.ta}</p>
-                      <p style={{ fontSize: '0.7rem', opacity: 0.4, margin: 0 }}>{cat.sub}</p>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: 'rgba(0,0,0,0.3)', padding: '0.5rem', borderRadius: '12px' }} onClick={(e) => e.stopPropagation()}>
-                    <button type="button" onClick={() => adjustCount(cat.id, -1)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', borderRadius: '8px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Minus size={20} />
-                    </button>
-                    <span style={{ minWidth: '24px', textAlign: 'center', fontWeight: 900, fontSize: '1.2rem', color: cat.color }}>{counts[cat.id]}</span>
-                    <button type="button" onClick={() => adjustCount(cat.id, 1)} style={{ background: cat.color, border: 'none', color: 'white', borderRadius: '8px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Plus size={20} />
-                    </button>
+          <div className="type-selector">
+            <button onClick={() => setType('SIGHTING')} className={`type-btn ${type === 'SIGHTING' ? 'active sighting' : ''}`}>
+              <Navigation2 size={18} /> {t.sighting}
+            </button>
+            <button onClick={() => setType('CLEARANCE')} className={`type-btn ${type === 'CLEARANCE' ? 'active clearance' : ''}`}>
+              <ShieldCheck size={18} /> {t.clearance}
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="form-section">
+            <div className="glass info-card" style={{ background: 'var(--glass-heavy)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div className="icon-box" style={{ background: 'var(--color-gold)', color: 'var(--color-coffee)' }}>
+                  <MapPin size={24} />
+                </div>
+                <div>
+                  <p className="label" style={{ margin: 0 }}>{detecting ? t.detecting : t.detected}</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <p style={{ fontWeight: 900, fontSize: '1rem', color: locationError ? '#ff4757' : 'white' }}>{form.range || '...'}</p>
+                    {!detecting && !locationError && <div className="pulse-dot"></div>}
                   </div>
                 </div>
-              ))}
+              </div>
+              <div className={`severity-badge ${manualSeverity.toLowerCase()}`} onClick={() => {
+                  const levels = ['LOW', 'MEDIUM', 'HIGH'];
+                  setManualSeverity(levels[(levels.indexOf(manualSeverity) + 1) % 3]);
+                }} style={{ cursor: 'pointer' }}>
+                {manualSeverity}
+              </div>
             </div>
-            <div className="field-group" style={{ marginTop: '2rem' }}>
-              <div className="label-container"><label className="label">{t.elephantCount}</label><span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.2)', fontWeight: 900 }}>TOTAL COUNT</span></div>
-              <div style={{ textAlign: 'center', background: 'rgba(255,255,255,0.03)', padding: '1.5rem', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)', fontSize: '3rem', fontWeight: 900, color: 'var(--color-gold)', fontFamily: 'var(--font-accent)' }}>{form.count}</div>
-            </div>
-          </div>
-        )}
 
-        {type === 'CLEARANCE' && (
-          <div className="field-group" style={{ animation: 'slideUp 0.3s ease-out' }}>
-            <div className="glass info-card" style={{ background: 'rgba(46, 204, 113, 0.1)', borderColor: 'rgba(46, 204, 113, 0.2)', marginBottom: '1.5rem' }}>
-               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}><ShieldCheck size={24} className="text-green-500" /><div><p className="label" style={{ color: '#2ecc71' }}>POST-CONFLICT STATUS</p><p style={{ fontWeight: 900, fontSize: '1.1rem' }}>Area Secured & Clear</p></div></div>
-            </div>
+            {type === 'SIGHTING' && (
+              <div className="field-group">
+                <div className="label-container"><label className="label">Elephant Categories</label></div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  {ELEPHANT_TYPES.map(cat => (
+                    <div 
+                      key={cat.id} 
+                      className={`glass media-card ${counts[cat.id] > 0 ? 'active' : ''}`}
+                      onClick={() => adjustCount(cat.id, 1)}
+                      style={{ padding: '0.75rem', minHeight: '100px', border: counts[cat.id] > 0 ? `2px solid ${cat.color}` : '' }}
+                    >
+                      <div style={{ position: 'absolute', top: '5px', right: '5px', background: counts[cat.id] > 0 ? cat.color : 'rgba(255,255,255,0.1)', color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 900 }}>
+                        {counts[cat.id]}
+                      </div>
+                      <div style={{ width: '40px', height: '40px', borderRadius: '10px', overflow: 'hidden', marginBottom: '0.5rem' }}>
+                        <img src={cat.img} alt={cat.id} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </div>
+                      <p style={{ fontSize: '0.75rem', fontWeight: 900, margin: 0 }}>{lang === 'en' ? cat.label.en : cat.label.ta}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="field-group" style={{ marginTop: '1.5rem' }}>
+                  <div style={{ textAlign: 'center', background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span className="label">Total Count</span>
+                    <span style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--color-gold)', fontFamily: 'var(--font-accent)' }}>{form.count}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {type === 'CLEARANCE' && (
+              <div className="field-group" style={{ animation: 'slideUp 0.3s ease-out' }}>
+                <div className="glass info-card" style={{ background: 'rgba(46, 204, 113, 0.1)', borderColor: 'rgba(46, 204, 113, 0.2)' }}>
+                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}><ShieldCheck size={24} color="#2ecc71" /><div><p className="label" style={{ color: '#2ecc71' }}>POST-CONFLICT STATUS</p><p style={{ fontWeight: 900 }}>Area Secured & Clear</p></div></div>
+                </div>
+                <div className="field-group" style={{ marginTop: '1.5rem' }}>
+                  <label className="label">Damage Assessment</label>
+                  <div className="tag-container">
+                    {[ { label: 'No Damage', icon: '✅' }, { label: 'Crop Damage', icon: '🌾' }, { label: 'Property Damage', icon: '🏠' }, { label: 'Human Injury', icon: '🩹' }, { label: 'Casualty', icon: '🚑' } ].map(item => (
+                      <div key={item.label} onClick={() => setForm({...form, damageDesc: item.label})} className={`tag ${form.damageDesc === item.label ? 'active' : ''}`}>
+                        {item.icon} {item.label}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="field-group">
-              <label className="label">Damage Assessment</label>
-              <div className="tag-container">
-                {[ { label: 'No Damage', icon: '✅' }, { label: 'Crop Damage', icon: '🌾' }, { label: 'Property Damage', icon: '🏠' }, { label: 'Human Injury', icon: '🩹' }, { label: 'Casualty', icon: '🚑' } ].map(item => (
-                  <div key={item.label} onClick={() => setForm({...form, damageDesc: item.label})} className={`tag ${form.damageDesc === item.label ? 'active' : ''}`} style={{ background: form.damageDesc === item.label ? 'var(--color-gold)' : '', padding: '10px 15px', fontSize: '0.7rem' }}>
-                    <span style={{ marginRight: '5px' }}>{item.icon}</span> {item.label}
-                  </div>
-                ))}
+              <label className="label">{type === 'SIGHTING' ? t.notes : 'Final Remarks'}</label>
+              <textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} className="input-main" placeholder="..." rows={3} />
+              {type === 'SIGHTING' && ( <div className="tag-container">{t.tags.map(tag => ( <div key={tag} onClick={() => toggleTag(tag)} className={`tag ${activeTags.includes(tag) ? 'active' : ''}`}>{tag}</div> ))}</div> )}
+            </div>
+
+            <div className="media-grid">
+              <div className={`glass media-card ${form.voice || recording ? 'active' : ''}`} onClick={() => { if (recording) stopRecording(); else if (!audioUrl) startRecording(); }}>
+                <div className="icon-box">{recording ? <Square size={24} fill="currentColor" /> : <Mic size={24} />}</div>
+                <span className="media-label">{recording ? t.recording : form.voice ? 'READY' : t.record}</span>
+              </div>
+              <div className="glass media-card" style={{ position: 'relative' }}>
+                <input type="file" accept="image/*" capture="environment" multiple onChange={e => handleAddPhotos(e.target.files)} style={{ position: 'absolute', inset: 0, opacity: 0, zIndex: 10, cursor: 'pointer' }} />
+                <div className="icon-box"><Camera size={24} /></div><span className="media-label">PHOTOS ({form.images.length})</span>
               </div>
             </div>
-            <div className="field-group" style={{ marginTop: '1.5rem' }}>
-              <div className="label-container"><label className="label">Casualties Reported</label><span style={{ fontSize: '0.6rem', color: 'red', fontWeight: 900 }}>CRITICAL</span></div>
-              <div className="count-adjuster" style={{ background: 'rgba(255,0,0,0.05)', borderColor: 'rgba(255,0,0,0.1)' }}>
-                <button type="button" className="adj-btn" onClick={() => setForm(f => ({ ...f, casualties: Math.max(0, f.casualties - 1) }))}><Minus size={24} /></button>
-                <div className="count-display" style={{ color: form.casualties > 0 ? 'red' : 'white', fontFamily: 'Inter, sans-serif', fontSize: '3rem' }}>{form.casualties}</div>
-                <button type="button" className="adj-btn" onClick={() => setForm(f => ({ ...f, casualties: f.casualties + 1 }))}><Plus size={24} /></button>
-              </div>
+
+            <button disabled={loading || submitted || detecting} className={`submit-btn ${submitted ? 'success' : ''}`}>
+              {loading ? <RefreshCw size={28} className="animate-spin" /> : submitted ? <CheckCircle2 size={28} /> : <><Navigation size={24} /> {t.submit}</>}
+            </button>
+          </form>
+        </motion.div>
+      ) : (
+        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="alerts-container">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h2 style={{ fontFamily: 'var(--font-accent)', color: 'var(--color-gold)' }}>{t.alertsTitle}</h2>
+            <button onClick={fetchAlerts} className="lang-toggle" style={{ width: '36px', height: '36px' }}>
+              <RefreshCw size={16} className={fetchingAlerts ? 'animate-spin' : ''} />
+            </button>
+          </div>
+          
+          {fetchingAlerts && recentAlerts.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '3rem', opacity: 0.5 }}>
+              <RefreshCw size={40} className="animate-spin" style={{ margin: '0 auto 1rem' }} />
+              <p>Fetching alerts...</p>
             </div>
-            <div className="field-group" style={{ marginTop: '1.5rem' }}><label className="label">Chase Result / Final Direction</label><input type="text" value={form.chaseResult || ''} onChange={e => setForm({...form, chaseResult: e.target.value})} className="input-main" placeholder="e.g. Driven towards forest boundary" /></div>
-          </div>
-        )}
-
-        <div className="field-group">
-          <label className="label">{type === 'SIGHTING' ? t.notes : 'Final Remarks'}</label>
-          <textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} className="input-main" placeholder="..." rows={3} />
-          {type === 'SIGHTING' && ( <div className="tag-container">{t.tags.map(tag => ( <div key={tag} onClick={() => toggleTag(tag)} className={`tag ${activeTags.includes(tag) ? 'active' : ''}`}>{tag}</div> ))}</div> )}
-        </div>
-
-        <div className="media-grid">
-          <div className={`glass media-card ${form.voice || recording ? 'active' : ''}`} onClick={() => { if (recording) stopRecording(); else if (!audioUrl) startRecording(); }}>
-            <div className="icon-box">{recording ? <Square size={24} fill="currentColor" /> : <Mic size={24} />}</div>
-            <span className="media-label">{recording ? t.recording : form.voice ? 'READY' : t.record}</span>
-            {audioUrl && !recording && ( <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}><button type="button" onClick={(e) => {e.stopPropagation(); new Audio(audioUrl).play();}} className="tag active" style={{ borderRadius: '8px' }}><Play size={10} fill="currentColor" /></button><button type="button" onClick={(e) => {e.stopPropagation(); setAudioUrl(null); setForm(f=>({...f, voice: null}))}} className="tag" style={{ borderRadius: '8px' }}><Trash2 size={10} /></button></div> )}
-          </div>
-          <div className="glass media-card" style={{ position: 'relative' }}>
-            <input type="file" accept="image/*" capture="environment" multiple onChange={e => handleAddPhotos(e.target.files)} style={{ position: 'absolute', inset: 0, opacity: 0, zIndex: 10, cursor: 'pointer' }} />
-            <div className="icon-box"><Camera size={24} /></div><span className="media-label">ADD PHOTOS ({form.images.length})</span>
-          </div>
-        </div>
-
-        {form.images.length > 0 && (
-          <div className="field-group" style={{ marginTop: '1rem' }}>
-             <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '10px' }}>
-                {form.images.map((img, i) => (
-                  <div key={i} style={{ position: 'relative', flexShrink: 0 }}>
-                    <div style={{ width: '60px', height: '60px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}><ImageIcon size={20} className="text-[var(--color-gold)]" /></div>
-                    <button type="button" onClick={() => removePhoto(i)} style={{ position: 'absolute', top: '-5px', right: '-5px', background: 'red', border: 'none', color: 'white', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={12} /></button>
+          ) : recentAlerts.length > 0 ? (
+            recentAlerts.map(alert => (
+              <div key={alert.id} className="glass alert-item">
+                <div className="alert-header">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div className={`badge-dot ${alert.severity?.toLowerCase() || 'low'}`}></div>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1px' }}>{alert.range || 'System'}</span>
                   </div>
-                ))}
-             </div>
-          </div>
-        )}
-
-        <button disabled={loading || submitted || detecting} className={`submit-btn ${submitted ? 'success' : ''}`}>
-          {loading ? <RefreshCw size={28} className="animate-spin" /> : submitted ? <CheckCircle2 size={28} /> : <><Navigation size={24} /> {t.submit}</>}
-        </button>
-      </form>
+                  <span className="alert-time">{new Date(alert.created_at).toLocaleString()}</span>
+                </div>
+                <div className="alert-body">
+                  {alert.report_type === 'SIGHTING' ? (
+                    `🚨 Sighting: ${alert.elephant_count} elephants reported.`
+                  ) : alert.report_type === 'CLEARANCE' ? (
+                    `✅ Area reported as CLEAR.`
+                  ) : alert.notes}
+                </div>
+                <div className="alert-meta">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <AlertTriangle size={12} /> {alert.severity || 'LOW'}
+                  </div>
+                  {alert.image_url && <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><ImageIcon size={12} /> Photo</div>}
+                  {alert.voice_url && <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Mic size={12} /> Voice</div>}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div style={{ textAlign: 'center', padding: '4rem', opacity: 0.3 }}>
+              <Info size={40} style={{ margin: '0 auto 1rem' }} />
+              <p>{t.noAlerts}</p>
+            </div>
+          )}
+          <div style={{ height: '100px' }}></div>
+        </motion.div>
+      )}
 
       <AnimatePresence>
         {submitted && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="success-overlay">
             <motion.div initial={{ scale: 0.9, y: 30 }} animate={{ scale: 1, y: 0 }} className="success-card">
-              <div style={{ width: '100px', height: '100px', background: 'rgba(46, 204, 113, 0.1)', borderRadius: '35px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2ecc71', margin: '0 auto 2rem', border: '1px solid rgba(46, 204, 113, 0.2)' }}><CheckCircle2 size={50} /></div>
-              <h2 style={{ fontSize: '2.5rem', fontWeight: 900, marginBottom: '0.5rem', fontFamily: 'var(--font-accent)' }}>{t.success}</h2>
-              <p style={{ opacity: 0.5, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '4px', fontWeight: 900, marginBottom: '2rem' }}>HQ ALERTED</p>
-              <a href={`https://wa.me/?text=${generateWhatsAppMessage()}`} target="_blank" rel="noreferrer" className="submit-btn" style={{ background: '#25D366', textDecoration: 'none', color: 'white' }}><RefreshCw size={24} style={{ transform: 'rotate(45deg)' }} /> BROADCAST TO WHATSAPP</a>
+              <div style={{ width: '80px', height: '80px', background: 'rgba(46, 204, 113, 0.1)', borderRadius: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2ecc71', margin: '0 auto 2rem', border: '1px solid rgba(46, 204, 113, 0.2)' }}><CheckCircle2 size={40} /></div>
+              <h2 style={{ fontSize: '1.8rem', fontWeight: 900, marginBottom: '0.5rem', fontFamily: 'var(--font-accent)' }}>{t.success}</h2>
+              <p style={{ opacity: 0.5, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '4px', fontWeight: 900, marginBottom: '2rem' }}>HQ ALERTED</p>
+              <a href={`https://wa.me/?text=${generateWhatsAppMessage()}`} target="_blank" rel="noreferrer" className="submit-btn" style={{ background: '#25D366', textDecoration: 'none', color: 'white', padding: '1.25rem' }}><RefreshCw size={24} style={{ transform: 'rotate(45deg)' }} /> BROADCAST TO WHATSAPP</a>
             </motion.div>
           </motion.div>
         )}
