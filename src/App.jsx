@@ -110,7 +110,7 @@ export default function App() {
   const [detecting, setDetecting] = useState(true);
   const [activeTags, setActiveTags] = useState([]);
   const [manualSeverity, setManualSeverity] = useState('LOW');
-  const [subscriptionId, setSubscriptionId] = useState(null);
+
   const [counts, setCounts] = useState({
     bull: 0,
     makhna: 0,
@@ -125,13 +125,6 @@ export default function App() {
   const [fetchingAlerts, setFetchingAlerts] = useState(false);
 
   useEffect(() => {
-    const checkSub = () => {
-      if (window.PushAlert) {
-         setSubscriptionId('PushAlert Active');
-      }
-    };
-    const interval = setInterval(checkSub, 5000);
-    
     // Supabase Real-time for live alerts
     const channel = supabase
       .channel('public:reports')
@@ -145,7 +138,6 @@ export default function App() {
       .subscribe();
 
     return () => {
-      clearInterval(interval);
       supabase.removeChannel(channel);
     };
   }, [view]);
@@ -237,17 +229,7 @@ export default function App() {
     });
   };
 
-  const requestNotificationPermission = async () => {
-    if ('Notification' in window) {
-      alert("🔔 PushAlert: Please use the floating bell icon or the popup that appears to subscribe.");
-    } else {
-      alert("❌ Browser does not support notifications");
-    }
-  };
 
-  const testDirectNotification = async () => {
-    alert("✅ PushAlert Integrated!\n\nYou will receive a notification as soon as an alert is broadcasted by the database.");
-  };
 
   useEffect(() => {
     requestLocation();
@@ -453,25 +435,7 @@ export default function App() {
       
       {view === 'FORM' ? (
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
-          {!subscriptionId && !loading && (
-            <div 
-              onClick={requestNotificationPermission}
-              style={{ 
-                background: 'linear-gradient(90deg, #ff4757, #ff6b81)', 
-                color: 'white', 
-                padding: '12px', 
-                textAlign: 'center', 
-                fontSize: '0.75rem', 
-                fontWeight: 900,
-                borderRadius: '16px',
-                marginBottom: '1.5rem',
-                cursor: 'pointer',
-                boxShadow: '0 8px 20px rgba(255, 71, 87, 0.3)'
-              }}
-            >
-              🚨 ALERT SYSTEM DISCONNECTED! TAP HERE TO JOIN
-            </div>
-          )}
+
 
           <div className="type-selector">
             <button onClick={() => setType('SIGHTING')} className={`type-btn ${type === 'SIGHTING' ? 'active sighting' : ''}`}>
