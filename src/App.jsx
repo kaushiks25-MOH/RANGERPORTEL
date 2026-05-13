@@ -478,9 +478,33 @@ export default function App() {
                       key={cat.id} 
                       className={`glass media-card ${counts[cat.id] > 0 ? 'active' : ''}`}
                       onClick={() => adjustCount(cat.id, 1)}
-                      style={{ padding: '0.75rem', minHeight: '100px', border: counts[cat.id] > 0 ? `2px solid ${cat.color}` : '' }}
+                      style={{ padding: '0.75rem', minHeight: '110px', border: counts[cat.id] > 0 ? `2px solid ${cat.color}` : '', position: 'relative' }}
                     >
-                      <div style={{ position: 'absolute', top: '5px', right: '5px', background: counts[cat.id] > 0 ? cat.color : 'rgba(255,255,255,0.1)', color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 900 }}>
+                      {/* Minus Button */}
+                      {counts[cat.id] > 0 && (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); adjustCount(cat.id, -1); }}
+                          style={{ 
+                            position: 'absolute', 
+                            top: '5px', 
+                            left: '5px', 
+                            background: 'rgba(255,255,255,0.1)', 
+                            border: 'none', 
+                            borderRadius: '8px', 
+                            width: '24px', 
+                            height: '24px', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            color: 'white',
+                            zIndex: 2
+                          }}
+                        >
+                          <Minus size={14} />
+                        </button>
+                      )}
+                      
+                      <div style={{ position: 'absolute', top: '5px', right: '5px', background: counts[cat.id] > 0 ? cat.color : 'rgba(255,255,255,0.1)', color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 900, zIndex: 1 }}>
                         {counts[cat.id]}
                       </div>
                       <div style={{ width: '40px', height: '40px', borderRadius: '10px', overflow: 'hidden', marginBottom: '0.5rem' }}>
